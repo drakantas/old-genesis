@@ -14,7 +14,7 @@ Antes de comenzar con la configuración de la app, es necesario crear un usuario
 CREATE USER genesis_app WITH LOGIN NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION CONNECTION LIMIT -1 PASSWORD 'contraseña';
 ```
 
-###BD
+### BD
 
 ```sql
 CREATE DATABASE genesis WITH OWNER = genesis_app ENCODING = 'UTF8' CONNECTION LIMIT = -1;
