@@ -7,7 +7,7 @@ from aiohttp.web import Application, run_app
 from aiohttp_jinja2 import setup as jinja_setup
 
 from utils import router
-from .config import *
+from config import *
 
 app = Application()
 
@@ -25,7 +25,7 @@ router.register()
 
 # Registrar recursos estáticos
 static_resources_path = Path(static_resources_path)
-app.router.add_static('/{}'.format(static_web_path), static_resources_path)
+app.router.add_static('/', static_resources_path)
 
 
 def main():

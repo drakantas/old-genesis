@@ -4,3 +4,4 @@
 mix-manifest.json
 alembic.ini
 config.py
+/__pycache__

@@ -1,0 +1,23 @@
+{% extends "layout/base.html" %}
+
+{% block container_title %}auth_container{% endblock %}
+
+{% block main %}
+    <div class="block_wrapper">
+        <a class="logo" href="#">Taller de Tésis</a>
+        <div class="wrapper">
+            <nav>
+                <ul class="nav nav-justified">
+                    <li class="active"><a href="#">Iniciar sesión</a></li>
+                    <li><a href="#">Nueva cuenta</a></li>
+                    <li><a href="#">Recuperar contraseña</a></li>
+                </ul>
+            </nav>
+            <div class="form_wrapper">
+                {% block content %}
+                {% endblock %}
+            </div>
+            <div class="clearfix"></div>
+        </div>
+    </div>
+{% endblock %}

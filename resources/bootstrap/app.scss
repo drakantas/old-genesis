@@ -10,3 +10,10 @@ $line-height-base: 1.5;
 
 // Color predeterminado
 $text-color: #8A8A8A;
+
+html, body {
+    height: 100%;
+    width: 100%;
+}
+
+@import 'resources/css/auth';
