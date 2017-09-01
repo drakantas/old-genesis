@@ -1,0 +1,41 @@
+{% extends "layout/auth.html" %}
+
+{% block content %}
+<form class="form-horizontal">
+    <div class="alert alert-info" role="alert">
+        <span class="glyphicon glyphicon-info-sign"></span> Detalles adicionales serán llenados una vez sea aprobado tu registro.
+    </div>
+    <div class="form-group">
+        <label for="id_type" class="col-sm-3 control-label">Tipo de documento</label>
+        <div class="col-sm-9">
+            <select class="form-control" id="id_type">
+                <option value="0" selected>DNI</option>
+                <option value="1">Carné de extranjería</option>
+            </select>
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="id" class="col-sm-3 control-label">DNI ó Carné de extranjería</label>
+        <div class="col-sm-9">
+            <input class="form-control" id="id" placeholder="DNI ó Carné de extranjería">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="password" class="col-sm-3 control-label">Contraseña</label>
+        <div class="col-sm-9">
+            <input type="password" class="form-control" id="password" placeholder="Contraseña">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="repeat_password" class="col-sm-3 control-label">Repetir contraseña</label>
+        <div class="col-sm-9">
+            <input type="password" class="form-control" id="repeat_password" placeholder="Repetir contraseña">
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="text-center">
+            <button class="btn btn-default">Registrarme</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

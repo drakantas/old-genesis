@@ -8,9 +8,9 @@
         <div class="wrapper">
             <nav>
                 <ul class="nav nav-justified">
-                    <li class="active"><a href="#">Iniciar sesión</a></li>
-                    <li><a href="#">Nueva cuenta</a></li>
-                    <li><a href="#">Recuperar contraseña</a></li>
+                    <li {% if location == 'login' %}class="active"{% endif %}><a href="/login">Iniciar sesión</a></li>
+                    <li {% if location == 'registration' %}class="active"{% endif %}><a href="/register">Nueva cuenta</a></li>
+                    <li {% if location == 'recover_password' %}class="active"{% endif %}><a href="/recover-password">Recuperar contraseña</a></li>
                 </ul>
             </nav>
             <div class="form_wrapper">
