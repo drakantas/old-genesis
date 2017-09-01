@@ -1,12 +1,15 @@
-from aiohttp.web import View, Response
+from aiohttp.web import View
+from aiohttp_jinja2 import template as view
 
 
 class Login(View):
-    async def get(self) -> Response:
-        return Response(text='Hola mundo')
+    @view('user/login.html')
+    async def get(self) -> None:
+        return {}
 
-    async def post(self) -> Response:
-        return Response(text='Hola mundo')
+    @view('user/login.html')
+    async def post(self) -> None:
+        return
 
 routes = {
     "login": Login
