@@ -19,19 +19,19 @@ depends_on = None
 def upgrade():
     op.create_table('usuario',
                     sa.Column('id', sa.BigInteger, primary_key=True, index=True),
-                    sa.Column('rol_id', sa.Integer, nullable=True, default=0),
-                    sa.Column('correo_electronico', sa.String(128), unique=True, nullable=False, index=True),
+                    sa.Column('rol_id', sa.Integer, nullable=True),
+                    sa.Column('correo_electronico', sa.String(128), unique=True, nullable=True, index=True),
                     sa.Column('credencial', sa.String(64), nullable=False),
                     sa.Column('nombres', sa.String(64), nullable=True, index=True),
                     sa.Column('apellidos', sa.String(64), nullable=True, index=True),
                     sa.Column('sexo', sa.SmallInteger, nullable=True),
-                    sa.Column('tipo_documento', sa.SmallInteger, default=0, nullable=False),
+                    sa.Column('tipo_documento', sa.SmallInteger, server_default=sa.DefaultClause('0'), nullable=False),
                     sa.Column('nacionalidad', sa.CHAR(2), nullable=True),
-                    sa.Column('facultad', sa.SmallInteger, default=0, nullable=False),
+                    sa.Column('facultad', sa.SmallInteger, server_default=sa.DefaultClause('0'), nullable=True),
                     sa.Column('nro_telefono', sa.BigInteger, nullable=True),
                     sa.Column('distrito', sa.SmallInteger, nullable=True),
                     sa.Column('direccion', sa.String(64), nullable=True),
-                    sa.Column('deshabilitado', sa.Boolean, default=0, nullable=False))
+                    sa.Column('deshabilitado', sa.Boolean, server_default=sa.false(), nullable=False))
 
 
 def downgrade():

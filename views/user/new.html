@@ -1,14 +1,30 @@
 {% extends "layout/auth.html" %}
 
 {% block content %}
-<form class="form-horizontal">
+<form class="form-horizontal" method="POST">
+    {% if errors %}
+    <div class="alert alert-danger" role="alert">
+        <ul>
+            {% for error in errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% if success %}
+    <div class="alert alert-success" role="alert">
+        {{ success }}
+    </div>
+    {% endif %}
+    {% if not errors and not success %}
     <div class="alert alert-info" role="alert">
         <span class="glyphicon glyphicon-info-sign"></span> Detalles adicionales serán llenados una vez sea aprobado tu registro.
     </div>
+    {% endif %}
     <div class="form-group">
         <label for="id_type" class="col-sm-3 control-label">Tipo de documento</label>
         <div class="col-sm-9">
-            <select class="form-control" id="id_type">
+            <select class="form-control" id="id_type" name="id_type">
                 <option value="0" selected>DNI</option>
                 <option value="1">Carné de extranjería</option>
             </select>
@@ -17,19 +33,19 @@
     <div class="form-group">
         <label for="id" class="col-sm-3 control-label">DNI ó Carné de extranjería</label>
         <div class="col-sm-9">
-            <input class="form-control" id="id" placeholder="DNI ó Carné de extranjería">
+            <input class="form-control" id="id" name="id" placeholder="DNI ó Carné de extranjería">
         </div>
     </div>
     <div class="form-group">
         <label for="password" class="col-sm-3 control-label">Contraseña</label>
         <div class="col-sm-9">
-            <input type="password" class="form-control" id="password" placeholder="Contraseña">
+            <input type="password" class="form-control" id="password" name="password" placeholder="Contraseña">
         </div>
     </div>
     <div class="form-group">
         <label for="repeat_password" class="col-sm-3 control-label">Repetir contraseña</label>
         <div class="col-sm-9">
-            <input type="password" class="form-control" id="repeat_password" placeholder="Repetir contraseña">
+            <input type="password" class="form-control" id="repeat_password" name="repeat_password" placeholder="Repetir contraseña">
         </div>
     </div>
     <div class="form-group">
