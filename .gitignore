@@ -6,3 +6,4 @@ alembic.ini
 config.py
 /__pycache__
 Pipfile.lock
+package-lock.json
