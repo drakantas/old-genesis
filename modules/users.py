@@ -83,12 +83,12 @@ class Registration(View):
         data = await self.request.post()
         id_type, id_ = data['id_type'], data['id']
         password, r_password = data['password'], data['repeat_password']
-        faculty = data['faculty']
+        school = data['school']
 
-        errors = await self.validate(id_type, id_, password, r_password, faculty)
+        errors = await self.validate(id_type, id_, password, r_password, school)
 
         if not errors:
-            id_type, id_, faculty = int(id_type), int(id_), int(faculty)
+            id_type, id_, faculty = int(id_type), int(id_), int(school)
 
             try:
                 await self.create(id_, id_type, hashpw(password.encode('utf-8'), gensalt()).decode('utf-8'), faculty)
@@ -103,24 +103,24 @@ class Registration(View):
         return display_data
 
     @staticmethod
-    async def validate(id_type: str, id_: str, password: str, repeat_password: str, faculty: str):
+    async def validate(id_type: str, id_: str, password: str, repeat_password: str, school: str):
         return validator.validate([
             ['Tipo de documento', id_type, 'digits|len:1'],
             ['DNI o Carné de extranjería', id_, 'digits|len:9,12'],
             ['Contraseña', password, 'len:8,16'],
             ['Repetir contraseña', repeat_password, 'repeat'],
-            ['Facultad', faculty, 'digits|len:1'],
+            ['Escuela', school, 'digits|len:1'],
         ])
 
-    async def create(self, id_: int, id_type, password: str, faculty: int):
+    async def create(self, id_: int, id_type, password: str, school: int):
         query = '''
-            INSERT INTO usuario (id, tipo_documento, credencial, facultad) 
+            INSERT INTO usuario (id, tipo_documento, credencial, escuela) 
             VALUES ($1, $2, $3, $4)
             RETURNING id
         '''
 
         async with self.request.app.db.acquire() as connection:
-            return await (await connection.prepare(query)).fetch(id_, id_type, password, faculty)
+            return await (await connection.prepare(query)).fetch(id_, id_type, password, school)
 
 
 class RecoverPassword(View):

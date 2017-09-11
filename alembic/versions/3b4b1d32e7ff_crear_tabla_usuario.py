@@ -27,7 +27,7 @@ def upgrade():
                     sa.Column('sexo', sa.SmallInteger, nullable=True),
                     sa.Column('tipo_documento', sa.SmallInteger, server_default=sa.DefaultClause('0'), nullable=False),
                     sa.Column('nacionalidad', sa.CHAR(2), nullable=True),
-                    sa.Column('facultad', sa.SmallInteger, server_default=sa.DefaultClause('0'), nullable=True),
+                    sa.Column('escuela', sa.SmallInteger, server_default=sa.DefaultClause('0'), nullable=True),
                     sa.Column('nro_telefono', sa.BigInteger, nullable=True),
                     sa.Column('distrito', sa.SmallInteger, nullable=True),
                     sa.Column('direccion', sa.String(64), nullable=True),

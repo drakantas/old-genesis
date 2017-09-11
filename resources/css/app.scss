@@ -1,0 +1,133 @@
+#app_container {
+    height: 100%;
+    width: 100%;
+    background-color: #F0F0F0;
+}
+
+#app_container > #sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 300px;
+    max-width: 100%;
+    background-color: #FFFFFF;
+    z-index: 999;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+}
+
+#app_container > #sidebar > .app_nav {
+    list-style: none;
+    font-size: 0;
+}
+
+#app_container > #sidebar > .app_nav > li {
+    display: block;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+}
+
+#app_container > #sidebar > .app_nav > li > a {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #797979;
+    text-transform: capitalize;
+    text-decoration: none;
+    padding-top: 20px;
+    padding-bottom: 20px;
+    width: 300px;
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+#app_container > #sidebar > .app_nav > li > a {
+    -webkit-transition: 200ms ease-in-out background-color;
+    transition: 200ms ease-in-out background-color;
+}
+
+#app_container > #sidebar > .app_nav > li > a:hover,
+#app_container > #sidebar > .app_nav > li > a:focus {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+#app_container > #sidebar > .app_nav > li > a > .glyphicon {
+    margin-right: 12px;
+}
+
+#app_container > #content {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 300px;
+    padding-top: 30px;
+    min-height: 100%;
+}
+
+#app_container > #content > .content_wrapper {
+    width: 1020px;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 4px;
+    background-color: #FFFFFF;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+    margin-bottom: 30px;
+}
+
+#app_container > #content > .content_wrapper.padded {
+    padding-top: 30px;
+    padding-left: 30px;
+    padding-right: 30px;
+    padding-bottom: 30px;
+}
+
+.management-page-search .form-control {
+    font-size: 15px;
+    font-weight: 400;
+    color: #686868;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.management-page-search .form-control,
+.management-page-search .btn {
+    display: block;
+}
+
+.management-page-search .btn {
+    text-align: center;
+    width: 100%;
+    padding-top: 9px;
+    padding-bottom: 10px;
+    font-weight: 500;
+    font-size: 15px;
+}
+
+.table-btn {
+    font-size: 13px;
+    font-weight: 500;
+    display: block;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    margin: 0;
+    padding-left: 2px;
+    padding-right: 2px;
+    background-color: transparent;
+    border: 2px dashed #565656;
+    border-radius: 0;
+    box-shadow: none;
+    color: #565656;
+}
+
+.table-btn:hover,
+.table-btn:focus,
+.table-btn:active {
+    background-color: #565656;
+    color: #FFFFFF;
+}
+
+.students_list_header .btn > .glyphicon {
+    margin-right: 10px;
+}

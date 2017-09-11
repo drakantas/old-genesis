@@ -1,0 +1,35 @@
+{% extends "layout/base.html" %}
+
+{% block container_title %}app_container{% endblock %}
+
+{% block main %}
+<div id="sidebar">
+    <nav class="app_nav">
+        <li>
+            <a href="#"><span class="glyphicon glyphicon-home"></span> Inicio</a>
+        </li>
+        <li>
+            <a href="#"><span class="glyphicon glyphicon-user"></span> Alumnos</a>
+        </li>
+        <li>
+            <a href="#"><span class="glyphicon glyphicon-education"></span> Proyectos</a>
+        </li>
+        <li>
+            <a href="#"><span class="glyphicon glyphicon-calendar"></span> Asistencia</a>
+        </li>
+        <li>
+            <a href="#"><span class="glyphicon glyphicon-stats"></span> Resultados</a>
+        </li>
+        <li>
+            <a href="#"><span class="glyphicon glyphicon-blackboard"></span> Sustentaciones</a>
+        </li>
+        <li>
+            <a href="#"><span class="glyphicon glyphicon-off"></span> Salir</a>
+        </li>
+    </nav>
+</div>
+<div id="content">
+    {% block content %}
+    {% endblock %}
+</div>
+{% endblock %}

@@ -4,6 +4,9 @@
 // Fuentes de íconos
 $icon-font-path: '~bootstrap-sass/assets/fonts/bootstrap/';
 
+// Fuente Roboto
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,400i,500,500i,700,700i,900,900i');
+
 // Fuente
 $font-size-base: 14px;
 $line-height-base: 1.5;
@@ -16,4 +19,9 @@ html, body {
     width: 100%;
 }
 
+* {
+    font-family: 'Roboto', sans-serif;
+}
+
+@import 'resources/css/app';
 @import 'resources/css/auth';
