@@ -36,6 +36,12 @@ class StudentsList(View):
             stmt = await connection.prepare(query)
             return await stmt.fetch(student_role_id, school, amount)
 
+
+class RegisterAttendance(View):
+    @view('teacher/register_attendance.html')
+    async def get(self):
+        pass
+
 routes = {
     "students": {
         "list": StudentsList,
