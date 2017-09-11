@@ -34,7 +34,10 @@ class Validator:
                 len_range = tuple(map(lambda x: int(x), len_range.split(','))) if ',' in len_range else int(len_range)
 
                 if not self._len(value_, len_range):
-                    errors_.append('{0} no se encuentra en el rango de {1}'.format(name_, rule_[4:]))
+                    if isinstance(len_range, tuple):
+                        errors_.append('{0} debe tener entre {1[0]} y {1[1]} caracteres'.format(name_, len_range))
+                    else:
+                        errors_.append('{0} debe tener {1} caracteres'.format(name_, len_range))
             elif rule_ in ('repeat', 'REPEAT'):
                 if not self._repeated_value(value_, pos_, elems_):
                     errors_.append('El valor ingresado en {} no es lo mismo que el ingresado '
