@@ -130,6 +130,7 @@ class RecoverPassword(View):
 
     @view('user/recover_password.html')
     async def post(self) -> dict:
+
         return {'location': 'recover_password'}
 
 routes = {

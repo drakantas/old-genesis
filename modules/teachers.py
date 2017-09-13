@@ -1,7 +1,7 @@
 from aiohttp.web import View
 from aiohttp_jinja2 import template as view
 
-from utils.auth import get_auth_data
+from utils.auth import get_auth_data, NotAuthenticated
 
 
 class StudentsList(View):
@@ -40,11 +40,32 @@ class StudentsList(View):
 class RegisterAttendance(View):
     @view('teacher/register_attendance.html')
     async def get(self):
-        pass
+        return {}
+
+
+class ListAttendance(View):
+    @view('teacher/attendance_list.html')
+    async def get(self):
+        return {}
+
+    async def get_students_attendances(self):
+        query = '''
+            SELECT alumno_id, profesor_id, fecha
+            FROM asistencia
+            WHERE profesor_id = $1 AND
+                  fecha >= 
+        '''
+
 
 routes = {
     "students": {
         "list": StudentsList,
-        "list/{display_amount:(?:10|25|all)}": StudentsList
+        "list/{display_amount:(?:10|25|all)}": StudentsList,
+    },
+    "teacher": {
+        "attendance": {
+            "register": RegisterAttendance,
+            "list": ListAttendance
+        }
     }
 }
