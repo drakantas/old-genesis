@@ -32,13 +32,14 @@ class StudentsList(View):
                 LIMIT 1
             )
             SELECT id, nombres, apellidos, 
-                  (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100 AS INT)
-                   FROM asistencia
-                   RIGHT JOIN ciclo_academico
-                          ON ciclo_academico.fecha_comienzo <= asistencia.fecha AND
-                             ciclo_academico.fecha_fin >= asistencia.fecha
+                COALESCE(
+                    (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100 AS INT)
+                        FROM asistencia
+                        RIGHT JOIN ciclo_academico
+                                ON ciclo_academico.fecha_comienzo <= asistencia.fecha AND
+                                   ciclo_academico.fecha_fin >= asistencia.fecha
                    WHERE asistencia.alumno_id = usuario.id
-                   HAVING COUNT(*) >= 1) AS asistencia
+                HAVING COUNT(*) >= 1), 0) AS asistencia
             FROM usuario
             WHERE rol_id = $2 AND
                   escuela = $3 AND
