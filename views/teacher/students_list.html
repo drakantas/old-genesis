@@ -37,7 +37,7 @@
                     <th>#</th>
                     <th>Apellidos y nombres</th>
                     <th>Título de tesis</th>
-                    <th>% de asistencias</th>
+                    <th>Asistencias</th>
                     <th>Opciones</th>
                 </tr>
             </thead>
@@ -47,7 +47,7 @@
                         <td>{{ loop.index }}</td>
                         <td>{{ student.apellidos }} {{ student.nombres }}</td>
                         <td>Ninguno.</td>
-                        <td>{{ student.asistencia }}%</td>
+                        <td>{{ student.asistencia }}% {% if student.peligro %}<a class="attendance-btn" data-toggle="tooltip" data-placement="top" title="En peligro de desaprobar el curso por inasistencias"><span class="glyphicon glyphicon-info-sign"></span></a>{% endif %}</td>
                         <td><a href="#" class="btn btn-primary table-btn">Ver proyecto</a></td>
                     </tr>
                 {% endfor %}
