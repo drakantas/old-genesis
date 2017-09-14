@@ -47,7 +47,7 @@
                         <td>{{ loop.index }}</td>
                         <td>{{ student.apellidos }} {{ student.nombres }}</td>
                         <td>Ninguno.</td>
-                        <td>Ninguno.</td>
+                        <td>{{ student.asistencia }}%</td>
                         <td><a href="#" class="btn btn-primary table-btn">Ver proyecto</a></td>
                     </tr>
                 {% endfor %}

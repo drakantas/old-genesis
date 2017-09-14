@@ -21,7 +21,8 @@ def upgrade():
                     sa.Column('alumno_id', sa.BigInteger, primary_key=True),
                     sa.Column('profesor_id', sa.BigInteger, primary_key=True),
                     sa.Column('fecha', sa.DateTime, primary_key=True),
-                    sa.Column('observacion', sa.String(512), nullable=True))
+                    sa.Column('observacion', sa.String(512), nullable=True),
+                    sa.Column('asistio', sa.Boolean, nullable=False, default=True))
 
     op.create_foreign_key('alumno_id_fk',
                           'asistencia', 'usuario',

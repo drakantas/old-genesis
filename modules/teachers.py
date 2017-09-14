@@ -1,3 +1,4 @@
+from datetime import datetime
 from aiohttp.web import View
 from aiohttp_jinja2 import template as view
 
@@ -19,22 +20,35 @@ class StudentsList(View):
         user = await get_auth_data(self.request)
         students = await self.get_students(user['escuela'], display_amount)
 
-        if students:
-            students = [student for student in students if student['nombres'] and student['apellidos']]
-
         return {'students': students}
 
     async def get_students(self, school: int, amount: int, student_role_id: int = 1):
         query = '''
-            SELECT id, nombres, apellidos
+            WITH ciclo_academico AS (
+                SELECT fecha_comienzo, fecha_fin
+                FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin
+                LIMIT 1
+            )
+            SELECT id, nombres, apellidos, 
+                  (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100 AS INT)
+                   FROM asistencia
+                   RIGHT JOIN ciclo_academico
+                          ON ciclo_academico.fecha_comienzo <= asistencia.fecha AND
+                             ciclo_academico.fecha_fin >= asistencia.fecha
+                   WHERE asistencia.alumno_id = usuario.id
+                   HAVING COUNT(*) >= 1) AS asistencia
             FROM usuario
-            WHERE rol_id = $1 AND
-                  escuela = $2
-            LIMIT $3
+            WHERE rol_id = $2 AND
+                  escuela = $3 AND
+                  nombres != '' AND
+                  apellidos != ''
+            LIMIT $4
         '''
         async with self.request.app.db.acquire() as connection:
             stmt = await connection.prepare(query)
-            return await stmt.fetch(student_role_id, school, amount)
+            return await stmt.fetch(datetime.utcnow(), student_role_id, school, amount)
 
 
 class RegisterAttendance(View):
@@ -61,11 +75,6 @@ routes = {
     "students": {
         "list": StudentsList,
         "list/{display_amount:(?:10|25|all)}": StudentsList,
-    },
-    "teacher": {
-        "attendance": {
-            "register": RegisterAttendance,
-            "list": ListAttendance
-        }
+        "register-attendance": RegisterAttendance
     }
 }
