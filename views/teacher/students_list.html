@@ -48,7 +48,13 @@
                         <td>{{ student.apellidos }} {{ student.nombres }}</td>
                         <td>Ninguno.</td>
                         <td>{{ student.asistencia }}% {% if student.peligro %}<a class="attendance-btn" data-toggle="tooltip" data-placement="top" title="En peligro de desaprobar el curso por inasistencias"><span class="glyphicon glyphicon-info-sign"></span></a>{% endif %}</td>
-                        <td><a href="#" class="btn btn-primary table-btn">Ver proyecto</a></td>
+                        <td>
+                            {% if not student.id_proyecto %}
+                                <a href="javascript:;" class="btn btn-primary table-btn">Sin tesis</a>
+                            {% else %}
+                                <a href="/projects/view/{{ student.id_proyecto }}" class="btn btn-primary table-btn">Ver tesis</a>
+                            {% endif %}
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>

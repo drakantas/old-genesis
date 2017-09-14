@@ -40,7 +40,13 @@ class StudentsList(View):
                                     ON ciclo_academico.fecha_comienzo <= asistencia.fecha AND
                                        ciclo_academico.fecha_fin >= asistencia.fecha
                        WHERE asistencia.alumno_id = usuario.id
-                    HAVING COUNT(*) >= 1), 0) AS asistencia
+                       HAVING COUNT(*) >= 1),
+                    0) AS asistencia,
+                    COALESCE(
+                        (SELECT id FROM proyecto
+                             RIGHT JOIN integrante_proyecto
+                                     ON integrante_proyecto.usuario_id = usuario.id),
+                    NULL) AS id_proyecto
                 FROM usuario
                 WHERE rol_id = $2 AND
                       escuela = $3 AND
@@ -49,8 +55,9 @@ class StudentsList(View):
                 LIMIT $4
             )
             SELECT id, nombres, apellidos, asistencia,
-            CASE WHEN asistencia < $5 THEN true ELSE false END as peligro
-            FROM alumno
+                   CASE WHEN asistencia < $5 THEN true ELSE false END as peligro,
+                   id_proyecto
+              FROM alumno
         '''
 
         async with self.request.app.db.acquire() as connection:
