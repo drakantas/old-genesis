@@ -1,0 +1,64 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <div class="row management-page-search">
+            <div class="col-sm-9">
+                <input class="form-control" id="searchStudent" placeholder="Buscar alumno">
+            </div>
+            <div class="col-sm-3">
+                <input type="button" class="btn btn-primary" value="Buscar">
+            </div>
+        </div>
+    </div>
+    <div class="content_wrapper padded">
+        <div class="row students_list_header">
+            <div class="col-sm-6">
+            </div>
+            <div class="col-sm-6 text-right">
+            </div>
+        </div>
+        <hr class="divider">
+        <form method="POST">
+            {% if result %}
+                <div class="alert alert-success" role="alert">
+                    Se registró la asistencia de los alumnos correctamente.
+                </div>
+            {% else %}
+                <div class="alert alert-danger" role="alert">
+                    No se pudo registrar la asistencai de los alumnos.
+                </div>
+            {% endif %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" id="select_all"></th>
+                        <th>#</th>
+                        <th>Apellidos y nombres</th>
+                        <th>DNI</th>
+                        <th>Observación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td><input type="checkbox" name="student_{{ student.id }}" checked></td>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ student.apellidos }} {{ student.nombres }}</td>
+                            <td>{{ student.id }}</td>
+                            <td>
+                                <select class="form-control" name="additional_{{ student.id }}">
+                                    <option value="Desastre natural">Desastre natural</option>
+                                    <option value="Accidente">Accidente</option>
+                                    <option value="Visita médica">Visita médica</option>
+                                    <option>Otro</option>
+                                </select>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <button class="btn btn-primary btn-lg">Registrar</button>
+        </form>
+    </div>
+{% endblock %}

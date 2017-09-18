@@ -43,9 +43,10 @@ class StudentsList(View):
                        HAVING COUNT(*) >= 1),
                     0) AS asistencia,
                     COALESCE(
-                        (SELECT id FROM proyecto
-                             RIGHT JOIN integrante_proyecto
-                                     ON integrante_proyecto.usuario_id = usuario.id),
+                        (SELECT proyecto_id 
+                         FROM integrante_proyecto
+                         WHERE integrante_proyecto.usuario_id = usuario.id
+                         LIMIT 1),
                     NULL) AS id_proyecto
                 FROM usuario
                 WHERE rol_id = $2 AND
@@ -68,7 +69,92 @@ class StudentsList(View):
 class RegisterAttendance(View):
     @view('teacher/register_attendance.html')
     async def get(self):
-        return {}
+        user = await get_auth_data(self.request)
+        semester, students = await self.fetch_semester(), await self.fetch_students(user['escuela'])
+
+        return {'semester': semester,
+                'students': students}
+
+    @view('teacher/register_attendance.html')
+    async def post(self):
+        user = await get_auth_data(self.request)
+        semester, students = await self.fetch_semester(), await self.fetch_students(user['escuela'])
+
+        if not semester:
+            raise ValueError
+
+        data = dict(await self.request.post())
+        data = await self.convert_data(data, students)
+        data = await self.format_data(data, user)
+
+        result = await self.register_attendance(data)
+
+        if isinstance(result, list):
+            result = True
+
+        return {'semester': semester,
+                'students': students,
+                'result': result}
+
+    @staticmethod
+    async def convert_data(data: dict, students: list) -> list:
+        new_data = list()
+
+        for s in students:
+            data_keys = data.keys()
+            attended = 'student_{}'.format(s['id'])
+            additional = 'additional_{}'.format(s['id'])
+
+            if additional not in data_keys:
+                raise ValueError
+
+            if attended not in data_keys:
+                attended_bool = False
+            elif data[attended] == 'on':
+                attended_bool = True
+            else:
+                raise ValueError
+
+            new_data.append([s['id'], data[additional], attended_bool])
+
+        return new_data
+
+    @staticmethod
+    async def format_data(data: list, user: dict) -> list:
+        current_time = datetime.utcnow()
+        return [[s[0], user['id'], current_time, s[1], s[2]] for s in data]
+
+    async def register_attendance(self, data: list):
+        async with self.request.app.db.acquire() as connection:
+            async with connection.transaction():
+                query = '''
+                    INSERT INTO asistencia (alumno_id, profesor_id, fecha, observacion, asistio)
+                    VALUES {0}
+                    RETURNING true;
+                '''.format(','.join(['({})'.format(','.join(list(map(lambda x: '\''+str(x)+'\'' if not isinstance(x, str) else '\''+x+'\'', v)))) for v in data]))
+
+                return await connection.fetch(query)
+
+    async def fetch_students(self, school: int, role: int = 1):
+        query = '''
+            SELECT id, nombres, apellidos
+            FROM usuario
+            WHERE rol_id = $1 AND
+                  escuela = $2
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(role, school)
+
+    async def fetch_semester(self):
+        query = '''
+            SELECT fecha_comienzo, fecha_fin
+            FROM ciclo_academico
+            WHERE $1 >= fecha_comienzo AND
+                  $1 <= fecha_fin
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(datetime.utcnow())
 
 
 class ListAttendance(View):
