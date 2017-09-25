@@ -26,7 +26,7 @@
                 </div>
             {% else %}
                 <div class="alert alert-danger" role="alert">
-                    No se pudo registrar la asistencai de los alumnos.
+                    No se pudo registrar la asistencia de los alumnos.
                 </div>
             {% endif %}
             <table class="table table-striped">
@@ -58,7 +58,10 @@
                     {% endfor %}
                 </tbody>
             </table>
-            <button class="btn btn-primary btn-lg">Registrar</button>
+            <div class="text-center">
+                <button class="btn btn-primary">Registrar</button>
+                <button class="btn btn-default">Cancelar</button>
+            </div>
         </form>
     </div>
 {% endblock %}

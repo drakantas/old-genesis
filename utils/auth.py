@@ -5,6 +5,7 @@ from aiohttp_session import get_session
 class NotAuthenticated(Exception):
     pass
 
+
 async def get_auth_data(request: Request) -> dict:
     session = await get_session(request)
 

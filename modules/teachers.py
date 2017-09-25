@@ -58,7 +58,8 @@ class StudentsList(View):
             SELECT id, nombres, apellidos, asistencia,
                    CASE WHEN asistencia < $5 THEN true ELSE false END as peligro,
                    id_proyecto
-              FROM alumno
+            FROM alumno
+            ORDER BY apellidos ASC
         '''
 
         async with self.request.app.db.acquire() as connection:
@@ -141,6 +142,7 @@ class RegisterAttendance(View):
             FROM usuario
             WHERE rol_id = $1 AND
                   escuela = $2
+            ORDER BY apellidos ASC
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(role, school)
@@ -155,20 +157,6 @@ class RegisterAttendance(View):
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(datetime.utcnow())
-
-
-class ListAttendance(View):
-    @view('teacher/attendance_list.html')
-    async def get(self):
-        return {}
-
-    async def get_students_attendances(self):
-        query = '''
-            SELECT alumno_id, profesor_id, fecha
-            FROM asistencia
-            WHERE profesor_id = $1 AND
-                  fecha >= 
-        '''
 
 
 routes = {

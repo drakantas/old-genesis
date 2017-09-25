@@ -1,0 +1,54 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <div class="row management-page-search">
+            <div class="col-sm-9">
+                <input class="form-control" id="searchStudent" placeholder="Buscar alumno">
+            </div>
+            <div class="col-sm-3">
+                <input type="button" class="btn btn-primary" value="Buscar">
+            </div>
+        </div>
+    </div>
+    <div class="content_wrapper padded">
+        <div class="row students_list_header">
+            <div class="col-sm-6">
+
+            </div>
+            <div class="col-sm-6 text-right">
+                <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span> Exportar como .PDF</a>
+            </div>
+        </div>
+        <hr class="divider">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="select_all"></th>
+                    <th>DNI / Carné de extranjería</th>
+                    <th>Tipo de documento</th>
+                    <th>Apellidos y nombres</th>
+                    <th>Correo electrónico</th>
+                    <th>Escuela</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                    <tr>
+                        <td><input type="checkbox" name="students" value="{{ student.id }}"></td>
+                        <td>{{ student.id }}</td>
+                        <td>{{ student.tipo_documento }}</td>
+                        <td>{{ student.apellidos }} {{ student.nombres }}</td>
+                        <td>{{ student.correo_electronico }}</td>
+                        <td>{{ student.escuela }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <hr class="divider">
+        <div class="text-center">
+            <button class="btn btn-primary">Autorizar</button>
+            <button class="btn btn-default">Cancelar</button>
+        </div>
+    </div>
+{% endblock %}
