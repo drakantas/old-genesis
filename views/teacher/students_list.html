@@ -34,8 +34,10 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>#</th>
+                    <th>DNI ó carné de extranjería</th>
+                    <th>Tipo de documento de identidad</th>
                     <th>Apellidos y nombres</th>
+                    <th>Escuela</th>
                     <th>Título de tesis</th>
                     <th>Asistencias</th>
                     <th>Opciones</th>
@@ -44,8 +46,10 @@
             <tbody>
                 {% for student in students %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td>{{ student.id }}</td>
+                        <td>{{ student.tipo_documento }}</td>
                         <td>{{ student.apellidos }} {{ student.nombres }}</td>
+                        <td>{{ student.escuela }}</td>
                         <td>Ninguno.</td>
                         <td>{{ student.asistencia }}% {% if student.peligro %}<a class="attendance-btn" data-toggle="tooltip" data-placement="top" title="En peligro de desaprobar el curso por inasistencias"><span class="glyphicon glyphicon-info-sign"></span></a>{% endif %}</td>
                         <td>

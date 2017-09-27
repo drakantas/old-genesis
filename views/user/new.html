@@ -1,7 +1,7 @@
 {% extends "layout/auth.html" %}
 
 {% block content %}
-<form class="form-horizontal" method="POST">
+<form class="form-horizontal" method="POST" accept-charset="utf-8" enctype="multipart/form-data">
     {% if errors %}
     <div class="alert alert-danger" role="alert">
         <ul>
@@ -18,7 +18,9 @@
     {% endif %}
     {% if not errors and not success %}
     <div class="alert alert-info" role="alert">
-        <span class="glyphicon glyphicon-info-sign"></span> Detalles adicionales serán llenados una vez sea aprobado tu registro.
+        <span class="glyphicon glyphicon-info-sign"></span> Detalles adicionales deberán ser ingresados una vez sea aprobado tu registro. <br>
+        Todos los campos son obligatorios.<br>
+        El documento adjuntado no ha de pesar más de 3MiBs. Solo se aceptan las extensiones: pdf y docx.
     </div>
     {% endif %}
     <div class="form-group">
@@ -79,6 +81,12 @@
         <label for="repeat_password" class="col-sm-3 control-label">Repetir contraseña</label>
         <div class="col-sm-9">
             <input type="password" class="form-control" id="repeat_password" name="repeat_password" placeholder="Repetir contraseña">
+        </div>
+    </div>
+    <div class="form-group">
+        <label for="attach_doc" class="col-sm-3 control-label">Adjuntar documento</label>
+        <div class="col-sm-9">
+            <input type="file" class="form-control" id="attach_doc" name="attach_doc">
         </div>
     </div>
     <div class="form-group">

@@ -3,7 +3,7 @@ from aiohttp_jinja2 import template as view
 from asyncpg.pool import PoolConnectionHolder
 
 from utils.auth import get_auth_data
-from utils.map import parse_data_key
+from utils.map import parse_data_key, map_users
 
 
 class ApproveUsers(View):
@@ -11,23 +11,25 @@ class ApproveUsers(View):
     async def get(self):
         user = await get_auth_data(self.request)
         students = await self._fetch_students(user['escuela'], self.request.app.db)
+        students = map_users(students)
 
-        def _convert_data_keys(student):
-            student['escuela'] = parse_data_key(student['escuela'], 'schools')
-            student['tipo_documento'] = parse_data_key(student['tipo_documento'], 'id_types')
-            return student
-
-        students = list(map(_convert_data_keys, [dict(student) for student in students]))
         return {'students': students}
 
     @staticmethod
     async def _fetch_students(school: int, dbi: PoolConnectionHolder):
         query = '''
-            SELECT id, rol_id, tipo_documento, nombres, apellidos, correo_electronico, escuela, deshabilitado
+            SELECT usuario.id, rol_id, tipo_documento, nombres, apellidos, correo_electronico, escuela, deshabilitado,
+                   solicitud_autorizacion.fecha_creacion, archivo_id, archivo.nombre as archivo_nombre,
+                   archivo.ext as archivo_ext
             FROM usuario
+            INNER JOIN solicitud_autorizacion
+                    ON usuario.id = solicitud_autorizacion.alumno_id
+            INNER JOIN archivo
+                    ON archivo.id = solicitud_autorizacion.archivo_id
             WHERE rol_id IS NULL AND
                   escuela=$1 AND
-                  deshabilitado=true
+                  autorizado=FALSE AND
+                  deshabilitado=FALSE
             ORDER BY apellidos ASC
         '''
         async with dbi.acquire() as connection:

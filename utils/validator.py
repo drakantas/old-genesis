@@ -59,7 +59,7 @@ class Validator:
 
     async def _check(self, value: str, name: str, rule: str, pos: int, dbi: PoolConnectionHolder,
                      elems: Union[List[Union[List, Tuple]], Tuple[Union[List, Tuple]]]) -> str:
-        if value == '':
+        if not value:
             return '{} no puede ser dejado en blanco'.format(name)
 
         if rule in ('digits', 'DIGITS'):

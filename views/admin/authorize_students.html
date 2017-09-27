@@ -12,15 +12,6 @@
         </div>
     </div>
     <div class="content_wrapper padded">
-        <div class="row students_list_header">
-            <div class="col-sm-6">
-
-            </div>
-            <div class="col-sm-6 text-right">
-                <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span> Exportar como .PDF</a>
-            </div>
-        </div>
-        <hr class="divider">
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -30,17 +21,21 @@
                     <th>Apellidos y nombres</th>
                     <th>Correo electrónico</th>
                     <th>Escuela</th>
+                    <th>Fecha de registro</th>
+                    <th>Documento adjunto</th>
                 </tr>
             </thead>
             <tbody>
                 {% for student in students %}
                     <tr>
-                        <td><input type="checkbox" name="students" value="{{ student.id }}"></td>
-                        <td>{{ student.id }}</td>
-                        <td>{{ student.tipo_documento }}</td>
-                        <td>{{ student.apellidos }} {{ student.nombres }}</td>
-                        <td>{{ student.correo_electronico }}</td>
-                        <td>{{ student.escuela }}</td>
+                        <td style="vertical-align:middle;"><input type="checkbox" name="students" value="{{ student.id }}"></td>
+                        <td style="vertical-align:middle;">{{ student.id }}</td>
+                        <td style="vertical-align:middle;">{{ student.tipo_documento }}</td>
+                        <td style="vertical-align:middle;">{{ student.apellidos }} {{ student.nombres }}</td>
+                        <td style="vertical-align:middle;">{{ student.correo_electronico }}</td>
+                        <td style="vertical-align:middle;">{{ student.escuela }}</td>
+                        <td style="vertical-align:middle;">{{ student.fecha_creacion }}</td>
+                        <td style="vertical-align:middle;"><a href="/download-file/{{ student.archivo_id }}" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-download-alt"></span> Descargar</a></td>
                     </tr>
                 {% endfor %}
             </tbody>

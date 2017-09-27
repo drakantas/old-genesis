@@ -1,3 +1,5 @@
+from typing import Generator, Union
+
 data_map = {
     'id_types': {
         0: 'DNI',
@@ -13,11 +15,17 @@ data_map = {
         6: 'Derecho',
         7: 'Medicina',
         8: 'Aeronáutica'
+    },
+
+    'files': {
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'pdf': 'application/pdf'
     }
 }
 
 
-def parse_data_key(k: int, data_set_: str) -> str:
+def parse_data_key(k: Union[int, str], data_set_: str) -> str:
     if data_set_ not in data_map:
         raise ValueError
 
@@ -27,3 +35,11 @@ def parse_data_key(k: int, data_set_: str) -> str:
         raise KeyError
 
     return data_set[k]
+
+
+def map_users(users: Generator) -> list:
+    def _convert_data_keys(user: dict) -> dict:
+        user['escuela'] = parse_data_key(user['escuela'], 'schools')
+        user['tipo_documento'] = parse_data_key(user['tipo_documento'], 'id_types')
+        return user
+    return list(map(_convert_data_keys, [dict(user) for user in users]))

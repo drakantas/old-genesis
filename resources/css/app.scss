@@ -4,6 +4,79 @@
     background-color: #F0F0F0;
 }
 
+#app_container > #top_nav {
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: 100%;
+    position: fixed;
+    height: 60px;
+    background-color: #FFFFFF;
+    z-index: 950;
+    padding-left: 300px;
+    border-bottom: 1px solid #D8D8D8;
+}
+
+#app_container > #top_nav > .tn_breadcrumb,
+#app_container > #top_nav > .user {
+    height: 60px;
+}
+
+#app_container > #top_nav > .tn_breadcrumb {
+    float: left;
+    text-align: left;
+    padding-top: 21px;
+    padding-bottom: 21px;
+    padding-left: 30px;
+}
+
+#app_container > #top_nav > .user {
+    float: right;
+    text-align: right;
+    padding-right: 30px;
+}
+
+#app_container > #top_nav > .user .user_card {
+    text-decoration: none;
+    display: block;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    border-bottom-color: #D8D8D8;
+    height: 60px;
+    border-radius: 0;
+}
+
+#app_container > #top_nav > .user .user_card > .avatar,
+#app_container > #top_nav > .user .user_card > .
+
+#app_container > #top_nav > .tn_breadcrumb > a {
+    display: inline-block;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: #8E8E8E;
+    text-decoration: none;
+}
+
+#app_container > #top_nav > .tn_breadcrumb > .separator {
+    display: inline-block;
+    font-size: 11px;
+    line-height: 18px;
+    color: #ACACAC;
+}
+
+#app_container > #top_nav > .tn_breadcrumb > a.current_page {
+    font-weight: 500;
+    color: #5C5C5C;
+}
+
+#app_container > #top_nav::after {
+    display: block;
+    content: '';
+    clear: both;
+}
+
 #app_container > #sidebar {
     position: fixed;
     left: 0;
@@ -13,7 +86,7 @@
     max-width: 100%;
     background-color: #FFFFFF;
     z-index: 999;
-    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15);
+    border-right: 1px solid #D8D8D8;
 }
 
 #app_container > #sidebar > .app_nav {
@@ -62,7 +135,7 @@
     width: 100%;
     max-width: 100%;
     padding-left: 300px;
-    padding-top: 30px;
+    padding-top: 90px;
     min-height: 100%;
 }
 

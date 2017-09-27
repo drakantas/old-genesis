@@ -1,8 +1,10 @@
 from datetime import datetime
 from aiohttp.web import View
 from aiohttp_jinja2 import template as view
+from asyncpg.pool import PoolConnectionHolder
 
 from utils.auth import get_auth_data, NotAuthenticated
+from utils.map import parse_data_key, map_users
 
 
 class StudentsList(View):
@@ -18,11 +20,14 @@ class StudentsList(View):
                 display_amount = int(display_amount)
 
         user = await get_auth_data(self.request)
-        students = await self.get_students(user['escuela'], display_amount)
+        students = await self.get_students(user['escuela'], display_amount, self.request.app.db)
+        students = map_users(students)
 
         return {'students': students}
 
-    async def get_students(self, school: int, amount: int, student_role_id: int = 1, danger: int = 80):
+    @staticmethod
+    async def get_students(school: int, amount: int, dbi: PoolConnectionHolder, student_role_id: int = 1,
+                           danger: int = 80):
         query = '''
             WITH ciclo_academico AS (
                 SELECT fecha_comienzo, fecha_fin
@@ -32,7 +37,7 @@ class StudentsList(View):
                 LIMIT 1
             ),
             alumno AS (
-                SELECT id, nombres, apellidos, 
+                SELECT id, tipo_documento, nombres, apellidos, escuela,
                     COALESCE(
                         (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100 AS INT)
                             FROM asistencia
@@ -55,14 +60,14 @@ class StudentsList(View):
                       apellidos != ''
                 LIMIT $4
             )
-            SELECT id, nombres, apellidos, asistencia,
+            SELECT id, tipo_documento, nombres, apellidos, asistencia, escuela,
                    CASE WHEN asistencia < $5 THEN true ELSE false END as peligro,
                    id_proyecto
             FROM alumno
             ORDER BY apellidos ASC
         '''
 
-        async with self.request.app.db.acquire() as connection:
+        async with dbi.acquire() as connection:
             stmt = await connection.prepare(query)
             return await stmt.fetch(datetime.utcnow(), student_role_id, school, amount, danger)
 

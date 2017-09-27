@@ -1,5 +1,7 @@
+from typing import Union
+from datetime import datetime
 from bcrypt import hashpw, checkpw, gensalt
-from aiohttp.web import View
+from aiohttp.web import View, web_request
 from aiohttp_session import get_session
 from aiohttp_jinja2 import template as view
 
@@ -81,19 +83,22 @@ class Registration(View):
         display_data = {'location': 'registration'}
 
         data = await self.request.post()
+
         name, last_name, email = data['name'], data['last_name'], data['email']
         id_type, id_ = data['id_type'], data['id']
         password, r_password = data['password'], data['repeat_password']
         school = data['school']
+        attached_doc = data['attach_doc']
 
-        errors = await self.validate(id_type, id_, name, last_name, email, password, r_password, school)
+        errors = await self.validate(id_type, id_, name, last_name, email, password, r_password, school, attached_doc)
 
         if not errors:
             id_type, id_, faculty = int(id_type), int(id_), int(school)
 
             try:
-                await self.create(id_, id_type, hashpw(password.encode('utf-8'), gensalt()).decode('utf-8'), name,
-                                  last_name, email, faculty)
+                await self.create(id_, id_type, hashpw(password.encode('utf-8'), gensalt()).decode('utf-8'),
+                                  name, last_name, email, faculty,
+                                  [*attached_doc.filename.rsplit('.', maxsplit=1), attached_doc.file.read()])
             except:
                 raise
             finally:
@@ -105,7 +110,7 @@ class Registration(View):
         return display_data
 
     async def validate(self, id_type: str, id_: str, name: str, last_name: str, email: str, password: str,
-                       repeat_password: str, school: str):
+                       repeat_password: str, school: str, attached_doc: Union[bytearray, web_request.FileField]):
         return await validator.validate([
             ['Nombres', name, 'len:8,64'],
             ['Apellidos', last_name, 'len:8,84'],
@@ -115,7 +120,22 @@ class Registration(View):
             ['Contraseña', password, 'len:8,16|password'],
             ['Repetir contraseña', repeat_password, 'repeat'],
             ['Escuela', school, 'digits|len:1'],
+            ['Documento adjunto', attached_doc, 'custom', self.validate_attached_doc]
         ], self.request.app.db)
+
+    @staticmethod
+    async def validate_attached_doc(name: str, value: web_request.FileField, *args):
+        if not isinstance(value, web_request.FileField):
+            return 'Algo ha sucedido, no se pudo validar el archivo'
+
+        if value.content_type not in ('application/msword',
+                                      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                                      'application/pdf'):
+            return 'Tipo de archivo no soportado, solo PDFs o DOCs'
+
+        # Se debe de separar la subida de archivos a otro formulario de tipo multipart con el cual manejar la subida
+        # como un stream y detenerlo si excede los 10MBs, esto de aquí es muy propenso a error
+        # TODO
 
     @staticmethod
     async def validate_document_type(name: str, value: str, *args):
@@ -135,16 +155,33 @@ class Registration(View):
         else:
             return 'Ingrese un tipo de documento correcto'
 
-    async def create(self, id_: int, id_type: int, password: str, name: str, last_name: str, email: str, school: int):
+    async def create(self, id_: int, id_type: int, password: str, name: str, last_name: str, email: str, school: int,
+                     attached_doc: list):
         query = '''
-            INSERT INTO usuario (id, tipo_documento, credencial, nombres,
-                                 apellidos, correo_electronico, escuela, deshabilitado) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, true)
-            RETURNING id
+            WITH estudiante AS (
+                INSERT INTO usuario (id, tipo_documento, credencial, nombres,
+                                     apellidos, correo_electronico, escuela, autorizado,
+                                     deshabilitado, fecha_creacion, fecha_ultima_actualizacion) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, $8, $9)
+                RETURNING id
+            ), archivo AS (
+                INSERT INTO archivo (nombre, ext, contenido, fecha_subido)
+                VALUES ($10, $11, $12, $13)
+                RETURNING id
+            )
+            INSERT INTO solicitud_autorizacion (alumno_id, fecha_creacion, archivo_id)
+            VALUES (
+                (SELECT id FROM estudiante LIMIT 1),
+                $14,
+                (SELECT id FROM archivo LIMIT 1)
+            )
         '''
-
+        now = datetime.utcnow()
         async with self.request.app.db.acquire() as connection:
-            return await (await connection.prepare(query)).fetch(id_, id_type, password, name, last_name, email, school)
+            return await (await connection.prepare(query)).fetch(id_, id_type, password, name,
+                                                                 last_name, email, school, now,
+                                                                 now, attached_doc[0], attached_doc[1], attached_doc[2],
+                                                                 now, now)
 
 
 class RecoverPassword(View):
