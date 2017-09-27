@@ -57,7 +57,7 @@ class Login(View):
         user = None
 
         query = '''
-            SELECT id, credencial
+            SELECT id, credencial, autorizado, deshabilitado
             FROM usuario
             WHERE id = $1
             LIMIT 1
@@ -71,6 +71,12 @@ class Login(View):
 
         if not checkpw(password.encode('utf-8'), user['credencial'].encode('utf-8')):
             raise FailedAuth('Contraseña incorrecta. Intentalo otra vez')
+
+        if user['deshabilitado']:
+            raise FailedAuth('Tu cuenta se encuentra deshabilitada')
+
+        if not user['autorizado']:
+            raise FailedAuth('Aún no se ha autorizado tu cuenta')
 
 
 class Registration(View):

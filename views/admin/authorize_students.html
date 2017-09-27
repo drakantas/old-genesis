@@ -12,38 +12,51 @@
         </div>
     </div>
     <div class="content_wrapper padded">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="select_all"></th>
-                    <th>DNI / Carné de extranjería</th>
-                    <th>Tipo de documento</th>
-                    <th>Apellidos y nombres</th>
-                    <th>Correo electrónico</th>
-                    <th>Escuela</th>
-                    <th>Fecha de registro</th>
-                    <th>Documento adjunto</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for student in students %}
+        <form method="post">
+            {% if alert %}
+                {% if alert.type == 'error' %}
+                    <div class="alert alert-danger" role="alert">
+                        No se pudo realizar esta operación, por favor inténtelo más tarde
+                    </div>
+                {% elif alert.type == 'success' %}
+                    <div class="alert alert-success" role="alert">
+                        Se autorizó a los estudiantes
+                    </div>
+                {% endif %}
+            {% endif %}
+            <table class="table table-striped">
+                <thead >
                     <tr>
-                        <td style="vertical-align:middle;"><input type="checkbox" name="students" value="{{ student.id }}"></td>
-                        <td style="vertical-align:middle;">{{ student.id }}</td>
-                        <td style="vertical-align:middle;">{{ student.tipo_documento }}</td>
-                        <td style="vertical-align:middle;">{{ student.apellidos }} {{ student.nombres }}</td>
-                        <td style="vertical-align:middle;">{{ student.correo_electronico }}</td>
-                        <td style="vertical-align:middle;">{{ student.escuela }}</td>
-                        <td style="vertical-align:middle;">{{ student.fecha_creacion }}</td>
-                        <td style="vertical-align:middle;"><a href="/download-file/{{ student.archivo_id }}" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-download-alt"></span> Descargar</a></td>
+                        <th style="vertical-align:middle;"><input type="checkbox" id="select_all"></th>
+                        <th style="vertical-align:middle;">DNI / Carné de extranjería</th>
+                        <th style="vertical-align:middle;">Tipo de documento</th>
+                        <th style="vertical-align:middle;">Apellidos y nombres</th>
+                        <th style="vertical-align:middle;">Correo electrónico</th>
+                        <th style="vertical-align:middle;">Escuela</th>
+                        <th style="vertical-align:middle;">Fecha de registro</th>
+                        <th style="vertical-align:middle;">Documento adjunto</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <hr class="divider">
-        <div class="text-center">
-            <button class="btn btn-primary">Autorizar</button>
-            <button class="btn btn-default">Cancelar</button>
-        </div>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                        <tr>
+                            <td style="vertical-align:middle;"><input type="checkbox" name="student_{{ student.id }}"></td>
+                            <td style="vertical-align:middle;">{{ student.id }}</td>
+                            <td style="vertical-align:middle;">{{ student.tipo_documento }}</td>
+                            <td style="vertical-align:middle;">{{ student.apellidos }} {{ student.nombres }}</td>
+                            <td style="vertical-align:middle;">{{ student.correo_electronico }}</td>
+                            <td style="vertical-align:middle;">{{ student.escuela }}</td>
+                            <td style="vertical-align:middle;">{{ student.fecha_creacion }}</td>
+                            <td style="vertical-align:middle;"><a href="/download-file/{{ student.archivo_id }}" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-download-alt"></span> Descargar</a></td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <hr class="divider">
+            <div class="text-center">
+                <button class="btn btn-primary">Autorizar</button>
+                <button class="btn btn-default">Cancelar</button>
+            </div>
+        </form>
     </div>
 {% endblock %}

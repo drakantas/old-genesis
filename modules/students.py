@@ -1,3 +1,4 @@
+from typing import Generator
 from aiohttp.web import View
 from aiohttp_jinja2 import template as view
 from asyncpg.pool import PoolConnectionHolder
@@ -14,6 +15,49 @@ class ApproveUsers(View):
         students = map_users(students)
 
         return {'students': students}
+
+    @view('admin/authorize_students.html')
+    async def post(self):
+        user = await get_auth_data(self.request)
+        students = await self._get_students(user, self.request.app.db)
+
+        data = await self.request.post()
+        data = list(self.checked_students(data, students))
+
+        try:
+            if data:
+                await self.authorize_students(((s,) for s in data), self.request.app.db)
+            else:
+                raise ValueError
+        except Exception:
+            alert = {'type': 'error'}
+        else:
+            alert = {'type': 'success'}
+
+        return {'students': await self._get_students(user, self.request.app.db),
+                'alert': alert}
+
+    async def _get_students(self, user: dict, dbi: PoolConnectionHolder) -> list:
+        students = await self._fetch_students(user['escuela'], dbi)
+        return map_users(students)
+
+    @staticmethod
+    def checked_students(data: dict, students: list) -> Generator:
+        for student in students:
+            if 'student_{}'.format(student['id']) in data:
+                yield student['id']
+
+    @staticmethod
+    async def authorize_students(data: Generator, dbi: PoolConnectionHolder):
+        query = '''
+            UPDATE usuario
+            SET autorizado=TRUE
+            WHERE id=$1
+        '''
+
+        async with dbi.acquire() as connection:
+            async with connection.transaction():
+                await connection.executemany(query, data)
 
     @staticmethod
     async def _fetch_students(school: int, dbi: PoolConnectionHolder):
