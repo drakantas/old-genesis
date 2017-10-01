@@ -1,15 +1,14 @@
-from datetime import datetime
 from aiohttp.web import View
-from aiohttp_jinja2 import template as view
+from datetime import datetime
 from asyncpg.pool import PoolConnectionHolder
 
-from utils.auth import get_auth_data, NotAuthenticated
-from utils.map import parse_data_key, map_users
+from utils.map import map_users
+from utils.helpers import view as view
 
 
 class StudentsList(View):
-    @view('teacher/students_list.html')
-    async def get(self):
+    @view('teacher.list')
+    async def get(self, user: dict):
         display_amount = 10
 
         if 'display_amount' in self.request.match_info:
@@ -19,7 +18,6 @@ class StudentsList(View):
             else:
                 display_amount = int(display_amount)
 
-        user = await get_auth_data(self.request)
         students = await self.get_students(user['escuela'], display_amount, self.request.app.db)
         students = map_users(students)
 
@@ -27,7 +25,7 @@ class StudentsList(View):
 
     @staticmethod
     async def get_students(school: int, amount: int, dbi: PoolConnectionHolder, student_role_id: int = 1,
-                           danger: int = 80):
+                           danger: int = 63):
         query = '''
             WITH ciclo_academico AS (
                 SELECT fecha_comienzo, fecha_fin
@@ -39,7 +37,8 @@ class StudentsList(View):
             alumno AS (
                 SELECT id, tipo_documento, nombres, apellidos, escuela,
                     COALESCE(
-                        (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100 AS INT)
+                        (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100
+                        AS INT)
                             FROM asistencia
                             RIGHT JOIN ciclo_academico
                                     ON ciclo_academico.fecha_comienzo <= asistencia.fecha AND
@@ -73,18 +72,16 @@ class StudentsList(View):
 
 
 class RegisterAttendance(View):
-    @view('teacher/register_attendance.html')
-    async def get(self):
-        user = await get_auth_data(self.request)
-        semester, students = await self.fetch_semester(), await self.fetch_students(user['escuela'])
+    @view('teacher.register')
+    async def get(self, user: dict):
+        semester, students = await self.get_semester_and_students(user['escuela'])
 
         return {'semester': semester,
                 'students': students}
 
-    @view('teacher/register_attendance.html')
-    async def post(self):
-        user = await get_auth_data(self.request)
-        semester, students = await self.fetch_semester(), await self.fetch_students(user['escuela'])
+    @view('teacher.register_attendance')
+    async def post(self, user: dict):
+        semester, students = await self.get_semester_and_students(user['escuela'])
 
         if not semester:
             raise ValueError
@@ -93,7 +90,7 @@ class RegisterAttendance(View):
         data = await self.convert_data(data, students)
         data = await self.format_data(data, user)
 
-        result = await self.register_attendance(data)
+        result = await self.register_attendance(data, self.request.app.db)
 
         if isinstance(result, list):
             result = True
@@ -101,6 +98,12 @@ class RegisterAttendance(View):
         return {'semester': semester,
                 'students': students,
                 'result': result}
+
+    async def get_semester_and_students(self, school: int):
+        semester = await self.fetch_semester(self.request.app.db)
+        students = await self.fetch_students(school, self.request.app.db)
+
+        return semester, students
 
     @staticmethod
     async def convert_data(data: dict, students: list) -> list:
@@ -130,18 +133,23 @@ class RegisterAttendance(View):
         current_time = datetime.utcnow()
         return [[s[0], user['id'], current_time, s[1], s[2]] for s in data]
 
-    async def register_attendance(self, data: list):
-        async with self.request.app.db.acquire() as connection:
+    @staticmethod
+    async def register_attendance(data: list, dbi: PoolConnectionHolder):
+        async with dbi.acquire() as connection:
             async with connection.transaction():
                 query = '''
                     INSERT INTO asistencia (alumno_id, profesor_id, fecha, observacion, asistio)
                     VALUES {0}
                     RETURNING true;
-                '''.format(','.join(['({})'.format(','.join(list(map(lambda x: '\''+str(x)+'\'' if not isinstance(x, str) else '\''+x+'\'', v)))) for v in data]))
+                '''.format(','.join(['({})'.format(
+                    ','.join(list(
+                        map(lambda x: '\''+str(x)+'\'' if not isinstance(x, str) else '\''+x+'\'', v)
+                    ))) for v in data]))
 
                 return await connection.fetch(query)
 
-    async def fetch_students(self, school: int, role: int = 1):
+    @staticmethod
+    async def fetch_students(school: int,  dbi: PoolConnectionHolder, role: int = 1):
         query = '''
             SELECT id, nombres, apellidos
             FROM usuario
@@ -149,10 +157,11 @@ class RegisterAttendance(View):
                   escuela = $2
             ORDER BY apellidos ASC
         '''
-        async with self.request.app.db.acquire() as connection:
+        async with dbi.acquire() as connection:
             return await (await connection.prepare(query)).fetch(role, school)
 
-    async def fetch_semester(self):
+    @staticmethod
+    async def fetch_semester(dbi: PoolConnectionHolder):
         query = '''
             SELECT fecha_comienzo, fecha_fin
             FROM ciclo_academico
@@ -160,14 +169,16 @@ class RegisterAttendance(View):
                   $1 <= fecha_fin
             LIMIT 1
         '''
-        async with self.request.app.db.acquire() as connection:
+        async with dbi.acquire() as connection:
             return await (await connection.prepare(query)).fetch(datetime.utcnow())
 
 
 routes = {
     "students": {
         "list": StudentsList,
-        "list/{display_amount:(?:10|25|all)}": StudentsList,
-        "register-attendance": RegisterAttendance
+        "list/{display_amount:(?:10|25|all)}": StudentsList
+    },
+    "attendance": {
+        "register": RegisterAttendance
     }
 }

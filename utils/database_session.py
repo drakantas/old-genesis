@@ -15,6 +15,7 @@ create_sess_query = '''
     VALUES ($1, $2)
 '''
 
+
 def gen_session_id() -> str:
     return uuid4().hex
 
@@ -41,10 +42,7 @@ class DatabaseStorage(AbstractStorage):
             if not data:
                 return Session(None, data=None, new=True, max_age=self.max_age)
 
-            try:
-                data = await self._encoder.decode(data['data'])
-            except:
-                raise
+            data = await self._encoder.decode(data['data'])
 
             return Session(None, data=data, new=False, max_age=self.max_age)
 

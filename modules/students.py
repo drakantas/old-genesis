@@ -1,24 +1,20 @@
 from typing import Generator
 from aiohttp.web import View
-from aiohttp_jinja2 import template as view
 from asyncpg.pool import PoolConnectionHolder
 
-from utils.auth import get_auth_data
-from utils.map import parse_data_key, map_users
+from utils.helpers import view
+from utils.map import map_users
 
 
 class ApproveUsers(View):
-    @view('admin/authorize_students.html')
-    async def get(self):
-        user = await get_auth_data(self.request)
-        students = await self._fetch_students(user['escuela'], self.request.app.db)
-        students = map_users(students)
+    @view('admin.authorize_students')
+    async def get(self, user: dict):
+        students = await self._get_students(user, self.request.app.db)
 
         return {'students': students}
 
-    @view('admin/authorize_students.html')
-    async def post(self):
-        user = await get_auth_data(self.request)
+    @view('admin.authorize_students')
+    async def post(self, user: dict):
         students = await self._get_students(user, self.request.app.db)
 
         data = await self.request.post()
@@ -29,7 +25,7 @@ class ApproveUsers(View):
                 await self.authorize_students(((s,) for s in data), self.request.app.db)
             else:
                 raise ValueError
-        except Exception:
+        except ValueError:
             alert = {'type': 'error'}
         else:
             alert = {'type': 'success'}
