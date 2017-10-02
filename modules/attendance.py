@@ -1,5 +1,5 @@
-from aiohttp.web import View
 from datetime import datetime
+from aiohttp.web import View
 from asyncpg.pool import PoolConnectionHolder
 
 from utils.map import map_users
@@ -7,7 +7,7 @@ from utils.helpers import view as view
 
 
 class StudentsList(View):
-    @view('teacher.list')
+    @view('attendance.list')
     async def get(self, user: dict):
         display_amount = 10
 
@@ -35,7 +35,7 @@ class StudentsList(View):
                 LIMIT 1
             ),
             alumno AS (
-                SELECT id, tipo_documento, nombres, apellidos, escuela,
+                SELECT usuario.id, tipo_documento, nombres, apellidos, escuela,
                     COALESCE(
                         (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100
                         AS INT)
@@ -46,22 +46,30 @@ class StudentsList(View):
                        WHERE asistencia.alumno_id = usuario.id
                        HAVING COUNT(*) >= 1),
                     0) AS asistencia,
-                    COALESCE(
-                        (SELECT proyecto_id 
-                         FROM integrante_proyecto
-                         WHERE integrante_proyecto.usuario_id = usuario.id
-                         LIMIT 1),
-                    NULL) AS id_proyecto
+                    proyecto.id as id_proyecto, COALESCE(proyecto.titulo, 'No registrado') as titulo_proyecto,
+                    (
+                        SELECT COUNT(true)
+                        FROM integrante_proyecto
+                        WHERE integrante_proyecto.proyecto_id = proyecto.id
+                    ) as integrantes_proyecto
                 FROM usuario
+                LEFT JOIN integrante_proyecto
+                        ON integrante_proyecto.usuario_id = usuario.id
+                LEFT JOIN proyecto
+                        ON proyecto.id = integrante_proyecto.proyecto_id
                 WHERE rol_id = $2 AND
                       escuela = $3 AND
                       nombres != '' AND
-                      apellidos != ''
+                      apellidos != '' AND
+                      activo = TRUE AND
+                      autorizado = TRUE AND
+                      deshabilitado = FALSE
                 LIMIT $4
             )
             SELECT id, tipo_documento, nombres, apellidos, asistencia, escuela,
                    CASE WHEN asistencia < $5 THEN true ELSE false END as peligro,
-                   id_proyecto
+                   id_proyecto, titulo_proyecto,
+                   CASE WHEN integrantes_proyecto < 2 THEN true ELSE false END as proyecto_solo
             FROM alumno
             ORDER BY apellidos ASC
         '''
@@ -72,7 +80,7 @@ class StudentsList(View):
 
 
 class RegisterAttendance(View):
-    @view('teacher.register')
+    @view('attendance.register')
     async def get(self, user: dict):
         semester, students = await self.get_semester_and_students(user['escuela'])
 

@@ -1,5 +1,5 @@
 #app_container {
-    height: 100%;
+    min-height: 100%;
     width: 100%;
     background-color: #F0F0F0;
 }
@@ -47,9 +47,6 @@
     height: 60px;
     border-radius: 0;
 }
-
-#app_container > #top_nav > .user .user_card > .avatar,
-#app_container > #top_nav > .user .user_card > .
 
 #app_container > #top_nav > .tn_breadcrumb > a {
     display: inline-block;
@@ -139,7 +136,7 @@
     min-height: 100%;
 }
 
-#app_container > #content > .content_wrapper {
+.content_wrapper {
     width: 1020px;
     margin-left: auto;
     margin-right: auto;
@@ -149,7 +146,7 @@
     margin-bottom: 30px;
 }
 
-#app_container > #content > .content_wrapper.padded {
+.content_wrapper.padded {
     padding-top: 30px;
     padding-left: 30px;
     padding-right: 30px;
@@ -179,26 +176,34 @@
 }
 
 .table-btn {
-    font-size: 13px;
-    font-weight: 500;
-    display: block;
-    padding-top: 2px;
-    padding-bottom: 2px;
-    margin: 0;
-    padding-left: 2px;
-    padding-right: 2px;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    border: 1px solid #DFDFDF;
+    color: #BEBEBE;
     background-color: transparent;
-    border: 2px dashed #565656;
-    border-radius: 0;
-    box-shadow: none;
-    color: #565656;
+    margin: 0;
+    font-size: 0;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 7px;
+    padding-bottom: 10px;
+    display: inline-block;
+    -webkit-transition: 200ms color ease-in-out, 200ms border-color ease-in-out;
+    -ms-transition: 200ms color ease-in-out, 200ms border-color ease-in-out;
+    transition: 200ms color ease-in-out, 200ms border-color ease-in-out;
 }
 
 .table-btn:hover,
 .table-btn:focus,
 .table-btn:active {
-    background-color: #565656;
-    color: #FFFFFF;
+    box-shadow: none;
+    border-color: #858585;
+    color: #858585;
+}
+
+.table-btn > .glyphicon {
+    font-size: 13px;
 }
 
 .students_list_header .btn > .glyphicon {
@@ -207,8 +212,60 @@
 
 .attendance-btn {
     cursor: pointer;
-    color: #d9534f;
-    font-size: 13px;
+    color: #337AB7;
+    font-size: 18px;
     display: inline-block;
+    vertical-align: middle;
     text-decoration: none;
+    padding-left: 2px;
+}
+
+.btn-remove-item {
+    color: #D9534F;
+    border-radius: 50%;
+    background-color: transparent;
+    box-shadow: none;
+    width: 40px;
+    height: 40px;
+    padding-top: 8px;
+    text-align: center;
+    -webkit-transition: background-color 200ms ease-in-out;
+    -ms-transition: background-color 200ms ease-in-out;
+    transition: background-color 200ms ease-in-out;
+}
+
+.btn-remove-item:hover,
+.btn-remove-item:focus,
+.btn-remove-item:active {
+    color: #D9534F;
+    background-color: rgba(217, 83, 79, 0.2);
+    box-shadow: none;
+}
+
+div[class^='schedule'] .remove {
+    height: 148px;
+    padding-top: 54px;
+    padding-bottom: 54px;
+    text-align: center;
+}
+
+div[class^='schedule'] .teacher-wrapper {
+    padding-bottom: 15px;
+}
+
+div[class^='schedule'] {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #EEEEEE;
+    padding-bottom: 20px;
+}
+
+div[class^='schedule']:last-child {
+    margin-bottom: 0;
+    border-bottom: none;
+}
+
+.content_wrapper .table th,
+.content_wrapper .table td {
+    vertical-align: middle;
+    text-align: center;
 }

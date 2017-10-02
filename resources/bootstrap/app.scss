@@ -1,5 +1,9 @@
-﻿// Incluir estilos de Bootstrap
+﻿// Bootstrap
 @import 'node_modules/bootstrap-sass/assets/stylesheets/bootstrap';
+
+// Bootstrap plugins
+@import 'node_modules/eonasdan-bootstrap-datetimepicker/src/sass/bootstrap-datetimepicker-build';
+@import 'node_modules/bootstrap-select/sass/bootstrap-select';
 
 // Fuentes de íconos
 $icon-font-path: '~bootstrap-sass/assets/fonts/bootstrap/';
@@ -21,6 +25,10 @@ html, body {
 
 * {
     font-family: 'Roboto', sans-serif;
+}
+
+body {
+    background-color: #F0F0F0;
 }
 
 @import 'resources/css/app';

@@ -31,8 +31,10 @@ def upgrade():
                     sa.Column('nro_telefono', sa.BigInteger, nullable=True),
                     sa.Column('distrito', sa.SmallInteger, nullable=True),
                     sa.Column('direccion', sa.String(64), nullable=True),
+                    sa.Column('avatar', sa.Binary, nullable=True),
                     sa.Column('fecha_creacion', sa.DateTime, nullable=False),
                     sa.Column('fecha_ultima_actualizacion', sa.DateTime, nullable=False),
+                    sa.Column('activo', sa.Boolean, server_default=sa.DefaultClause('TRUE'), nullable=False),
                     sa.Column('autorizado', sa.Boolean, server_default=sa.true(), nullable=False),
                     sa.Column('deshabilitado', sa.Boolean, server_default=sa.false(), nullable=False))
 

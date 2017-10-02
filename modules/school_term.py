@@ -19,6 +19,9 @@ class CreateSchoolTerm(View):
     async def post(self, user: dict):
         current_school_term, teachers = await self.get_school_term_and_teachers(user['escuela'])
 
+        data = await self.request.post()
+        print(data)
+
         if not current_school_term:
             pass
 
@@ -26,23 +29,23 @@ class CreateSchoolTerm(View):
                 'today': datetime.utcnow(),
                 'current_school_term': current_school_term}
 
-    async def get_school_term_and_teachers(self, school: int, rol_id: int = 2, now: datetime = datetime.utcnow()):
+    async def get_school_term_and_teachers(self, school: int, role_id: int = 2, now: datetime = datetime.utcnow()):
         current_school_term = await self.fetch_current_school_term(now, self.request.app.db)
-        teachers = map_users(await self.fetch_teachers(school, rol_id, self.request.app.db))
+        teachers = map_users(await self.fetch_teachers(school, role_id, self.request.app.db))
 
         return current_school_term, teachers
 
     @staticmethod
-    async def fetch_teachers(school: int, rol_id: int, dbi: PoolConnectionHolder):
+    async def fetch_teachers(school: int, role_id: int, dbi: PoolConnectionHolder):
         query = '''
-            SELECT id, role_id, tipo_documento, nombres, apellidos, correo_electronico, nro_telefono, escuela
+            SELECT id, rol_id, tipo_documento, nombres, apellidos, correo_electronico, nro_telefono, escuela
             FROM usuario
-            WHERE role_id = $1 AND
+            WHERE rol_id = $1 AND
                   deshabilitado != TRUE AND
                   escuela = $2
         '''
         async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetch(rol_id, school)
+            return await (await connection.prepare(query)).fetch(role_id, school)
 
     @staticmethod
     async def fetch_current_school_term(now: datetime, dbi: PoolConnectionHolder):
