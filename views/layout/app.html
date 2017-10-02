@@ -35,14 +35,21 @@
     <div class="user">
         <div class="dropdown">
             <a class="btn btn-default dropdown-toggle user_card" type="button" id="userOptions" data-toggle="dropdown">
-                Mostrar resultados
+                <div class="avatar">
+                    <div class="user_avatar default_male" style=""></div>
+                </div>
+                <div class="middle_content">
+                    {{ user.nombres }} <span class="user_role">Profesor</span>
+                </div>
+                <div class="toggle_indicator">
+                    <button class="btn btn_user_toggle"><span class="glyphicon glyphicon-menu-down"></span></button>
+                </div>
             </a>
             <ul class="dropdown-menu" aria-labelledby="userOptions">
-                <li><a href="/profile">Mi perfíl</a></li>
-                <li><a href="/profile">Configuración</a></li>
-                <li><a href="/students/list/25">Cambiar contraseña</a></li>
+                <li><a href="/profile/{{ user.id }}">Mi perfíl</a></li>
+                <li><a href="/user/change-password">Cambiar contraseña</a></li>
                 <li role="separator" class="divider"></li>
-                <li><a href="/students/list/all">Cerrar sesión</a></li>
+                <li><a href="/logout">Cerrar sesión</a></li>
             </ul>
         </div>
     </div>

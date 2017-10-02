@@ -39,13 +39,119 @@
 
 #app_container > #top_nav > .user .user_card {
     text-decoration: none;
-    display: block;
+    display: table;
     border-left: none;
     border-right: none;
     border-top: none;
     border-bottom-color: #D8D8D8;
-    height: 60px;
+    height: 59px;
     border-radius: 0;
+    font-size: 0;
+    min-width: 210px;
+    padding: 0;
+    margin: 0;
+}
+
+#app_container > #top_nav > .user .user_card::after {
+    display: block;
+    content: '';
+    clear: both;
+}
+
+#app_container > #top_nav > .user .user_card > .avatar,
+#app_container > #top_nav > .user .user_card > .middle_content,
+#app_container > #top_nav > .user .user_card > .toggle_indicator {
+    height: 59px;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+#app_container > #top_nav > .user .user_card > .toggle_indicator {
+    width: 42px;
+    font-size: 15px;
+    padding-right: 10px;
+}
+
+#app_container > #top_nav > .user .user_card > .avatar {
+    width: 42px;
+    padding-left: 10px;
+}
+
+#app_container > #top_nav > .user .user_card > .middle_content {
+    min-width: 126px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 13px;
+}
+
+#app_container > #top_nav > .user .user_card > .avatar > .user_avatar {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    content: '';
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: 50% 50%;
+}
+
+#app_container > #top_nav > .user .user_card > .avatar > .user_avatar.default_female {
+    background-image: url('../images/female_user.png');
+}
+
+#app_container > #top_nav > .user .user_card > .avatar > .user_avatar.default_male {
+    background-image: url('../images/male_user.png');
+}
+
+#app_container > #top_nav > .user .user_card:hover,
+#app_container > #top_nav > .user .user_card:focus,
+#app_container > #top_nav > .user .user_card:active,
+#app_container > #top_nav > .user .user_card.active,
+#app_container > #top_nav > .user .open > .btn-default.dropdown-toggle {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.btn_user_toggle {
+    background-color: transparent;
+    border: 1px solid #DFDFDF;
+    color: #BEBEBE;
+    padding-left: 0;
+    padding-right: 0;
+    line-height: 15px;
+    height: 32px;
+    width: 32px;
+    text-align: center;
+    outline: none;
+    -webkit-transition: color 200ms ease-in-out, border-color 200ms ease-in-out;
+    -ms-transition: color 200ms ease-in-out, border-color 200ms ease-in-out;
+    transition: color 200ms ease-in-out, border-color 200ms ease-in-out;
+}
+
+.btn_user_toggle:hover,
+.btn_user_toggle:focus,
+.btn_user_toggle:active,
+#app_container > #top_nav > .user .user_card:hover .btn_user_toggle,
+#app_container > #top_nav > .user .user_card:focus .btn_user_toggle,
+#app_container > #top_nav > .user .user_card:active .btn_user_toggle,
+#app_container > #top_nav > .user .user_card.active .btn_user_toggle {
+    border-color: #858585;
+    color: #757575;
+    box-shadow: none;
+}
+
+#app_container > #top_nav > .user .user_card > .middle_content {
+    text-transform: uppercase;
+    color: #9C9C9C;
+    line-height: 1em;
+    text-align: left;
+}
+
+#app_container > #top_nav > .user .user_card > .middle_content > span.user_role {
+    display: block;
+    color: #656565;
+    letter-spacing: 0.5px;
 }
 
 #app_container > #top_nav > .tn_breadcrumb > a {
@@ -269,3 +375,5 @@ div[class^='schedule']:last-child {
     vertical-align: middle;
     text-align: center;
 }
+
+
