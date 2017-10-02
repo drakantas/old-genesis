@@ -19,6 +19,9 @@ class CreateSchoolTerm(View):
     async def post(self, user: dict):
         current_school_term, teachers = await self.get_school_term_and_teachers(user['escuela'])
 
+        if not current_school_term:
+            pass
+
         return {'teachers': teachers,
                 'today': datetime.utcnow(),
                 'current_school_term': current_school_term}
