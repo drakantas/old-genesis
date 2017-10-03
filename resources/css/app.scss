@@ -376,4 +376,9 @@ div[class^='schedule']:last-child {
     text-align: center;
 }
 
-
+.table.report td,
+.table.report th {
+    vertical-align: middle;
+    text-align: center;
+    padding: 5px;
+}

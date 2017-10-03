@@ -1,7 +1,7 @@
 """Crear tabla horario profesor
 
-Revision ID: 9cc5248ac099
-Revises: cf6bd44b1c51
+Revision ID: cf6bd44b1c51
+Revises: 19ce90d214fd
 Create Date: 2017-09-17 23:06:36.043136
 
 """
@@ -10,17 +10,18 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '9cc5248ac099'
-down_revision = 'cf6bd44b1c51'
+revision = 'cf6bd44b1c51'
+down_revision = '19ce90d214fd'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
     op.create_table('horario_profesor',
-                    sa.Column('ciclo_id', sa.SmallInteger, primary_key=True),
-                    sa.Column('profesor_id', sa.BigInteger, primary_key=True),
-                    sa.Column('dia_clase', sa.SmallInteger, default=0, primary_key=True),
+                    sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+                    sa.Column('ciclo_id', sa.SmallInteger, nullable=False),
+                    sa.Column('profesor_id', sa.BigInteger, nullable=False),
+                    sa.Column('dia_clase', sa.SmallInteger, nullable=False),
                     sa.Column('hora_comienzo', sa.SmallInteger, default=0, nullable=False),
                     sa.Column('hora_fin', sa.SmallInteger, default=0, nullable=False))
 

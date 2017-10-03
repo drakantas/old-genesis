@@ -79,6 +79,35 @@ class StudentsList(View):
             return await stmt.fetch(datetime.utcnow(), student_role_id, school, amount, danger)
 
 
+class ReadAttendanceReport(View):
+    async def get(self):
+        pass
+
+    @staticmethod
+    async def fetch_schedules(school_term: int, dbi: PoolConnectionHolder):
+        query = '''
+            SELECT profesor_id, nombres, apellidos, dia_clase, hora_comienzo, hora_fin
+            FROM horario_profesor
+            LEFT JOIN usuario
+                   ON usuario.id = profesor_id
+            WHERE ciclo_id = $1
+        '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school_term)
+
+    @staticmethod
+    async def fetch_school_term(dbi: PoolConnectionHolder):
+        query = '''
+            SELECT fecha_comienzo, fecha_fin
+            FROM ciclo_academico
+            WHERE $1 >= fecha_comienzo AND
+                  $1 <= fecha_fin
+            LIMIT 1
+        '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow())
+
+
 class RegisterAttendance(View):
     @view('attendance.register')
     async def get(self, user: dict):
@@ -108,7 +137,7 @@ class RegisterAttendance(View):
                 'result': result}
 
     async def get_semester_and_students(self, school: int):
-        semester = await self.fetch_semester(self.request.app.db)
+        semester = await self.fetch_school_term(self.request.app.db)
         students = await self.fetch_students(school, self.request.app.db)
 
         return semester, students
@@ -169,7 +198,7 @@ class RegisterAttendance(View):
             return await (await connection.prepare(query)).fetch(role, school)
 
     @staticmethod
-    async def fetch_semester(dbi: PoolConnectionHolder):
+    async def fetch_school_term(dbi: PoolConnectionHolder):
         query = '''
             SELECT fecha_comienzo, fecha_fin
             FROM ciclo_academico

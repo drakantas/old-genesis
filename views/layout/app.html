@@ -59,3 +59,8 @@
     {% endblock %}
 </div>
 {% endblock %}
+
+{% block extensions %}
+    {% include 'attendance/personal_report.html' %}
+    {% include 'score/personal_report.html' %}
+{% endblock %}
