@@ -104,16 +104,37 @@ class ReadAttendanceReport(View):
 
         for schedule in schedules:
             attendances[schedule['id']] = await self.fetch_attendance_for_schedule(student_id,
-                                                                                   school_term['id'],
+                                                                                   schedule['id'],
                                                                                    self.request.app.db)
 
-        result_data = {
+        result_data = flatten({
             'school_term': school_term,
             'schedules': schedules,
             'attendances': attendances
-        }
+        })
 
-        return json_response(flatten(result_data), status=200)
+        result_data['overall'] = {}
+
+        _total = 0
+        _total_times_attended = 0
+
+        for _s, _a in result_data['attendances'].items():
+            if _a:
+                al_len, attended = 0, 0
+
+                for _ar in _a:
+                    al_len += 1
+                    if _ar['asistio']:
+                        attended += 1
+
+                result_data['overall'][_s] = int(round(attended / al_len, 2) * 100)
+                _total += al_len
+                _total_times_attended += attended
+
+        if result_data['overall']:
+            result_data['overall']['average'] = int(round(_total_times_attended / _total, 2) * 100)
+
+        return json_response(result_data, status=200)
 
 
     @staticmethod

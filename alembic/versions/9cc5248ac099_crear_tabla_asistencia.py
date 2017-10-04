@@ -20,7 +20,7 @@ def upgrade():
     op.create_table('asistencia',
                     sa.Column('alumno_id', sa.BigInteger, primary_key=True),
                     sa.Column('horario_id', sa.Integer, primary_key=True),
-                    sa.Column('fecha_registro', sa.DateTime, nullable=False),
+                    sa.Column('fecha_registro', sa.DateTime, primary_key=True),
                     sa.Column('observacion', sa.String(512), nullable=True),
                     sa.Column('asistio', sa.Boolean, nullable=False, default=True))
 

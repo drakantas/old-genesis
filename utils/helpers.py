@@ -1,4 +1,5 @@
 from asyncpg import Record
+from math import ceil, floor
 from aiohttp.web import View
 from datetime import datetime
 from typing import Union, List, Dict
@@ -73,4 +74,3 @@ def flatten(data: Union[List, Dict, Record]) -> Union[List, Dict]:
         raise ValueError('Solo se soporta dict y list')
 
     return _data
-
