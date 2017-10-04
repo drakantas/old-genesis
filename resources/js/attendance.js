@@ -2,7 +2,7 @@ class Attendance
 {
     constructor()
     {
-        this.fetchSingleReport('2003207956');
+        this.registerEvents();
     }
 
     studentReport(id)
@@ -13,6 +13,20 @@ class Attendance
     studentReportFromSchoolTerm(id, school_term)
     {
         return `/attendance/student-report/school-term-${school_term}/${id}`;
+    }
+
+    registerEvents()
+    {
+        let $this = this;
+
+        $('a.attendance-btn').on('click', function(e) {
+            const student = $($(e.currentTarget).parent().parent().find('.student_id')[0]);
+            const student_id = student.text();
+
+            $this.fetchSingleReport(student_id);
+
+            $('#student_attendance_report').modal();
+        });
     }
 
     fetchSingleReport(student, school_term = null)
@@ -29,7 +43,7 @@ class Attendance
 
         axios.get(endpoint)
             .then(function (response) {
-                $this.buildReport(response.data.overall, response.data.schedules);
+                $('#student_attendance_report .modal-body').html($this.buildReport(response.data.overall, response.data.schedules));
             })
             .catch(function (error) {
                 console.log(error);
@@ -55,6 +69,7 @@ class Attendance
         let overall_headers = "";
         let overall_body = "";
         let buffer = [];
+        let _schedules = "";
 
         if (schedules.length > 0) {
             for (const i of schedules.keys()) {
@@ -75,7 +90,38 @@ class Attendance
             }
         }
 
-        
+        if (buffer.length > 0) {
+            for (const teacher_group of buffer) {
+                let first = true;
+                for (const teacher of teacher_group) {
+                    let left_space = (teacher.dia_clase === 0) ? 0 : teacher.dia_clase;
+                    let right_space = (7 - teacher.dia_clase) === 0 ? 0 : 7 - teacher.dia_clase;
+                    let left = (left_space !== 0) ? `<td colspan="${left_space}"></td>` : '';
+                    let right = (right_space !== 0) ? `<td colspan="${right_space}"></td>` : '';
+                    if (first) {
+                        _schedules = _schedules + `
+                            <tr>
+                                <td rowspan="${teacher_group.length}">${teacher.profesor_nombres} ${teacher.profesor_apellidos}</td>
+                                ${left}
+                                <td>${teacher.hora_comienzo} - ${teacher.hora_fin}</td>
+                                ${right}
+                            </tr>
+                        `;
+                        first = false;
+                        continue;
+                    }
+                    _schedules = _schedules + `
+                            <tr>
+                                ${left}
+                                <td>${teacher.hora_comienzo} - ${teacher.hora_fin}</td>
+                                ${right}
+                            </tr>
+                    `;
+                }
+            }
+        }
+
+
         return `
             <table class="table report">
                 <thead>
@@ -108,28 +154,7 @@ class Attendance
                         </tr>
                 </thead>
                 <tbody>
-                        <tr>
-                            <td rowspan="2">Dr. Susy Bayona</td>
-                            <td colspan="1"></td>
-                            <td>05:30PM - 07:30 PM</td>
-                            <td colspan="5"></td>
-                        </tr>
-                        <tr>
-                            <td colspan="5"></td>
-                            <td>05:30PM - 07:30 PM</td>
-                            <td colspan="1"></td>
-                        </tr>
-                    <tr>
-                            <td rowspan="1">Dr. Susy Bayona</td>
-                            <td colspan="3"></td>
-                            <td>05:30PM - 07:30 PM</td>
-                            <td colspan="3"></td>
-                        </tr>
-                        <tr>
-                            <td colspan="6"></td>
-                            <td>05:30PM - 07:30 PM</td>
-                            <td colspan="1"></td>
-                        </tr>
+                        ${_schedules}
                 </tbody>
             </table>
         `;

@@ -159,6 +159,7 @@ class ReadAttendanceReport(View):
             LEFT JOIN usuario
                    ON usuario.id = profesor_id
             WHERE ciclo_id = $1
+            ORDER BY dia_clase ASC, hora_comienzo ASC
         '''
         async with dbi.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term)

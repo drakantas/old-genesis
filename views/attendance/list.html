@@ -45,7 +45,7 @@
             <tbody>
                 {% for student in students %}
                     <tr>
-                        <td width="10%"><abbr data-toggle="tooltip" title="{{ student.tipo_documento }}">{{ student.id }}</abbr></td>
+                        <td width="10%"><abbr data-toggle="tooltip" title="{{ student.tipo_documento }}" class="student_id">{{ student.id }}</abbr></td>
                         <td width="25%">{{ student.apellidos }} {{ student.nombres }}</td>
                         <td width="10%">{{ student.escuela }}</td>
                         <td width="25%">{{ student.titulo_proyecto }}</td>
