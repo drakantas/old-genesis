@@ -70,11 +70,13 @@ class Attendance
         let overall_body = "";
         let buffer = [];
         let _schedules = "";
+        let schedule_number_by_teacher = [];
 
         if (schedules.length > 0) {
             for (const i of schedules.keys()) {
+                let p_value = (typeof overall[i + 1] === 'undefined') ? 0 : overall[i + 1];
                 overall_headers = overall_headers + `<th colspan="1">Horario ${i + 1}</th>`;
-                overall_body = overall_body + `<td colspan="1">${overall[i + 1]}%</td>`;
+                overall_body = overall_body + `<td colspan="1">${p_value}%</td>`;
 
                 for(const k in schedules[i]) {
                     if (k !== 'profesor_id') continue;
@@ -91,6 +93,7 @@ class Attendance
         }
 
         if (buffer.length > 0) {
+            let schedule_counter = 1;
             for (const teacher_group of buffer) {
                 let first = true;
                 for (const teacher of teacher_group) {
@@ -102,25 +105,30 @@ class Attendance
                         _schedules = _schedules + `
                             <tr>
                                 <td rowspan="${teacher_group.length}">${teacher.profesor_nombres} ${teacher.profesor_apellidos}</td>
+                                <td>Horario ${schedule_counter}</td>
                                 ${left}
                                 <td>${teacher.hora_comienzo} - ${teacher.hora_fin}</td>
                                 ${right}
                             </tr>
                         `;
+                        schedule_counter += 1;
                         first = false;
                         continue;
                     }
                     _schedules = _schedules + `
                             <tr>
+                                <td>Horario ${schedule_counter}</td>
                                 ${left}
                                 <td>${teacher.hora_comienzo} - ${teacher.hora_fin}</td>
                                 ${right}
                             </tr>
                     `;
+                    schedule_counter += 1;
                 }
             }
         }
 
+        overall['average'] = (typeof overall['average'] === 'undefined') ? 0 : overall['average'];
 
         return `
             <table class="table report">
@@ -143,7 +151,7 @@ class Attendance
             <table class="table report">
                 <thead>
                         <tr>
-                            <th>Profesor</th>
+                            <th colspan="2">Profesor</th>
                             <th>Domingo</th>
                             <th>Lunes</th>
                             <th>Martes</th>

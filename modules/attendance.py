@@ -115,24 +115,30 @@ class ReadAttendanceReport(View):
 
         result_data['overall'] = {}
 
-        _total = 0
-        _total_times_attended = 0
+        total_amount, attended = 0, 0
 
-        for _s, _a in result_data['attendances'].items():
-            if _a:
-                al_len, attended = 0, 0
+        for _i, _s in enumerate(result_data['schedules']):
+            _ni = _i + 1
+            result_data['overall'][_ni] = list()
 
-                for _ar in _a:
-                    al_len += 1
-                    if _ar['asistio']:
-                        attended += 1
+            for _, _s_wa in result_data['attendances'].items():
+                if _s_wa:
+                    for _a in _s_wa:
+                        if _a['horario_id'] == _s['id']:
+                            total_amount += 1
+                            if _a['asistio']:
+                                attended += 1
+                                result_data['overall'][_ni].append(1)
+                            else:
+                                result_data['overall'][_ni].append(0)
 
-                result_data['overall'][_s] = int(round(attended / al_len, 2) * 100)
-                _total += al_len
-                _total_times_attended += attended
+        for _k, _overall in result_data['overall'].items():
+            if _overall:
+                result_data['overall'][_k] = int(round(sum(_overall) / len(_overall), 2) * 100)
+            else:
+                result_data['overall'][_k] = 0
 
-        if result_data['overall']:
-            result_data['overall']['average'] = int(round(_total_times_attended / _total, 2) * 100)
+        result_data['overall']['average'] = int(round(attended / total_amount, 2) * 100)
 
         return json_response(result_data, status=200)
 
@@ -140,7 +146,7 @@ class ReadAttendanceReport(View):
     @staticmethod
     async def fetch_attendance_for_schedule(student: int, schedule: int, dbi: PoolConnectionHolder):
         query = '''
-            SELECT fecha_registro, asistio
+            SELECT horario_id, fecha_registro, asistio
             FROM asistencia
             WHERE alumno_id = $1 AND
                   horario_id = $2
@@ -159,7 +165,7 @@ class ReadAttendanceReport(View):
             LEFT JOIN usuario
                    ON usuario.id = profesor_id
             WHERE ciclo_id = $1
-            ORDER BY dia_clase ASC, hora_comienzo ASC
+            ORDER BY usuario.nombres ASC, usuario.apellidos ASC, dia_clase ASC, hora_comienzo ASC
         '''
         async with dbi.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term)
