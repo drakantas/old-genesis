@@ -15,7 +15,7 @@ roles_data = './_setup/roles.json'
 roles_data = Path(roles_data)
 
 
-async def get_data(path: Path) -> dict:
+async def get_data(path: Path) -> list:
     with open(path, 'rb') as f:
         return await JSON.decode(f.read().decode('utf-8'))
 
@@ -54,7 +54,7 @@ async def do_transaction(data: list, table: str, dbi: PoolConnectionHolder) -> s
         INSERT INTO {table} {columns}
         VALUES {values}
         RETURNING id;
-    '''.format(table=table, columns='(' + ', '.join(columns) + ')', values=values)
+    '''.format(table=table, columns='("' + '", "'.join(columns) + '")', values=values)
 
     async with dbi.acquire() as connection:
         async with connection.transaction():
@@ -63,13 +63,14 @@ async def do_transaction(data: list, table: str, dbi: PoolConnectionHolder) -> s
 
 def main():
     loop = asyncio.get_event_loop()
+    _students_data = loop.run_until_complete(get_data(students_data))
+    _students_data = list(parse_data(_students_data))
 
-    data = loop.run_until_complete(get_data(students_data))
-    data = list(parse_data(data))
+    _roles_data = list(loop.run_until_complete(get_data(roles_data)))
 
     pool = loop.run_until_complete(create_pool(dsn=db_dsn))
-    roles = loop.run_until_complete(do_transaction(data, 'rol_usuario', pool))
-    students = loop.run_until_complete(do_transaction(data, 'usuario', pool))
+    roles = loop.run_until_complete(do_transaction(_roles_data, 'rol_usuario', pool))
+    students = loop.run_until_complete(do_transaction(_students_data, 'usuario', pool))
 
     print(list(roles), list(students))
 
