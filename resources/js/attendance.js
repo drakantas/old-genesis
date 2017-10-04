@@ -43,7 +43,7 @@ class Attendance
 
         axios.get(endpoint)
             .then(function (response) {
-                $('#student_attendance_report .modal-body').html($this.buildReport(response.data.overall, response.data.schedules));
+                $('#student_attendance_report .modal-body').html($this.buildReport(response.data.overall, response.data.schedules, response.data.attendances));
             })
             .catch(function (error) {
                 console.log(error);
@@ -64,7 +64,40 @@ class Attendance
         return -1;
     }
 
-    buildReport(overall, schedules)
+    convertToTimeStr(time)
+    {
+        let period = "";
+
+        if (time >= 1200) {
+            period = "PM";
+        }
+        else {
+            period = "AM";
+        }
+
+        let _time = (time / 100.0) + "";
+            _time = _time.split('.');
+
+        let hours = _time[0], minutes = _time[1];
+
+        if (typeof hours === 'undefined') {
+            hours = "00";
+        }
+        else if (hours.length === 1) {
+            hours = "0" + hours;
+        }
+
+        if (typeof minutes === 'undefined') {
+            minutes = "00";
+        }
+        else if (minutes.length === 0) {
+            minutes = minutes + "0";
+        }
+
+        return `${hours}:${minutes} ${period}`;
+    }
+
+    buildReport(overall, schedules, attendances)
     {
         let overall_headers = "";
         let overall_body = "";
@@ -107,7 +140,7 @@ class Attendance
                                 <td rowspan="${teacher_group.length}">${teacher.profesor_nombres} ${teacher.profesor_apellidos}</td>
                                 <td>Horario ${schedule_counter}</td>
                                 ${left}
-                                <td>${teacher.hora_comienzo} - ${teacher.hora_fin}</td>
+                                <td>${this.convertToTimeStr(teacher.hora_comienzo)} - ${this.convertToTimeStr(teacher.hora_fin)}</td>
                                 ${right}
                             </tr>
                         `;
@@ -119,7 +152,7 @@ class Attendance
                             <tr>
                                 <td>Horario ${schedule_counter}</td>
                                 ${left}
-                                <td>${teacher.hora_comienzo} - ${teacher.hora_fin}</td>
+                                <td>${this.convertToTimeStr(teacher.hora_comienzo)} - ${this.convertToTimeStr(teacher.hora_fin)}</td>
                                 ${right}
                             </tr>
                     `;
@@ -129,6 +162,43 @@ class Attendance
         }
 
         overall['average'] = (typeof overall['average'] === 'undefined') ? 0 : overall['average'];
+
+        let detailed_attendance_list = "";
+
+        for (const schedule of schedules) {
+            for (const _schedule_key in attendances) {
+                const _schedule_attendances = attendances[_schedule_key];
+                if (+_schedule_key === schedule['id']) {
+                    for(_sch_att of _schedule_attendances) {
+                        detailed_attendance_list = detailed_attendance_list + `
+                            <tr><td>${_sch_att['fecha_registro']}</td>
+                        `;
+                        for (const schedule of schedules) {
+                            if (+_schedule_key === schedule['id']) {
+                                    if(_sch_att.asistio) {
+                                        detailed_attendance_list = detailed_attendance_list + `
+                                            <td><span class="glyphicon glyphicon-ok"></span></td>
+                                        `;
+                                    }
+                                    else {
+                                        detailed_attendance_list = detailed_attendance_list + `
+                                            <td><span class="glyphicon glyphicon-remove"></span></td>
+                                        `;
+                                    }
+                            }
+                            else {
+                                detailed_attendance_list = detailed_attendance_list + `
+                                    <td> - </td>
+                                `;
+                            }
+                        }
+                        detailed_attendance_list = detailed_attendance_list + `
+                            </tr>
+                        `;
+                    }
+                }
+            }
+        }
 
         return `
             <table class="table report">
@@ -164,6 +234,18 @@ class Attendance
                 <tbody>
                         ${_schedules}
                 </tbody>
+            </table>
+            <hr class="divider" />
+            <table class="table report">
+                <thead>
+                    <tr>
+                        <th>Día y hora</th>
+                        ${overall_headers}
+                    </tr>
+                </thead>
+                <tbody>
+                    ${detailed_attendance_list}
+                </body>
             </table>
         `;
     }

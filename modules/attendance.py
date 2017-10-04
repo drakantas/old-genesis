@@ -138,7 +138,10 @@ class ReadAttendanceReport(View):
             else:
                 result_data['overall'][_k] = 0
 
-        result_data['overall']['average'] = int(round(attended / total_amount, 2) * 100)
+        if attended != 0 and total_amount != 0:
+            result_data['overall']['average'] = int(round(attended / total_amount, 2) * 100)
+        else:
+            result_data['overall']['average'] = 0
 
         return json_response(result_data, status=200)
 
