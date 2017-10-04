@@ -167,8 +167,9 @@ class Registration(View):
             WITH estudiante AS (
                 INSERT INTO usuario (id, tipo_documento, credencial, nombres,
                                      apellidos, correo_electronico, escuela, autorizado,
-                                     deshabilitado, fecha_creacion, fecha_ultima_actualizacion) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, $8, $9)
+                                     deshabilitado, fecha_creacion, fecha_ultima_actualizacion,
+                                     role_id) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, $8, $9, $15)
                 RETURNING id
             ), archivo AS (
                 INSERT INTO archivo (nombre, ext, contenido, fecha_subido)
@@ -187,7 +188,7 @@ class Registration(View):
             return await (await connection.prepare(query)).fetch(id_, id_type, password, name,
                                                                  last_name, email, school, now,
                                                                  now, attached_doc[0], attached_doc[1], attached_doc[2],
-                                                                 now, now)
+                                                                 now, now, 1)
 
 
 class RecoverPassword(View):
