@@ -111,7 +111,7 @@ class ReadAttendanceReport(View):
             'school_term': school_term,
             'schedules': schedules,
             'attendances': attendances
-        })
+        }, {'with_time': True, 'long': True})
 
         result_data['overall'] = {}
 

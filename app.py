@@ -14,6 +14,7 @@ app = Application()
 
 app.db = None
 
+
 # Temporal, cambiará bastante en base se desarrolle la abstracción de bd
 async def setup_connection_pool(app_: Application):
     if not app_.db:
@@ -37,6 +38,7 @@ def main():
     loop.run_until_complete(setup_connection_pool(app))
     db_session_setup(app, database_session.DatabaseStorage(app.db))
     run_app(app, host=host, port=port)
+
 
 if __name__ == '__main__':
     main()
