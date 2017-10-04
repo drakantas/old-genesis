@@ -82,7 +82,23 @@ class ReadAttendanceReport(View):
     async def get(self):
         student_id = int(self.request.match_info['student_id'])
 
-        school_term = await self.fetch_school_term(self.request.app.db)
+        if 'school_term_id' in self.request.match_info:
+            school_term_id = int(self.request.match_info['school_term_id'])
+            school_term = await self.school_term_exists(school_term_id, self.request.app.db)
+
+            if school_term:
+                school_term = {'id': school_term_id}
+                del school_term_id
+            else:
+                # Precondition failed, school term not found
+                return json_response({}, status=412)
+        else:
+            school_term = await self.fetch_school_term(self.request.app.db)
+
+            if not school_term:
+                # Precondition failed, no school term registered as of now
+                return json_response({}, status=412)
+
         schedules = await self.fetch_schedules(school_term['id'], self.request.app.db)
         attendances = dict()
 
@@ -137,6 +153,17 @@ class ReadAttendanceReport(View):
         '''
         async with dbi.acquire() as connection:
             return await (await connection.prepare(query)).fetchrow(datetime.utcnow())
+
+    @staticmethod
+    async def school_term_exists(school_term: id, dbi: PoolConnectionHolder):
+        query = '''
+            SELECT true
+            FROM ciclo_academico
+            WHERE id = $1
+            LIMIT 1
+        '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school_term)
 
 
 class RegisterAttendance(View):
@@ -248,6 +275,7 @@ routes = {
     },
     "attendance": {
         "register": RegisterAttendance,
-        "student-report/{student_id:[1-9][0-9]*}": ReadAttendanceReport
+        "student-report/{student_id:[1-9][0-9]*}": ReadAttendanceReport,
+        "student-report/school-term-{school_term_id:[1-9][0-9]*}/{student_id:[1-9][0-9]*}": ReadAttendanceReport
     }
 }
