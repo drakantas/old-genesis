@@ -19,11 +19,7 @@ depends_on = None
 def upgrade():
     op.create_table('rol_usuario',
                     sa.Column('id', sa.Integer, primary_key=True),
-                    sa.Column('desc', sa.String(16), unique=True, nullable=False),
-                    sa.Column('ver_dashboard', sa.Boolean, default=True, nullable=True),
-                    sa.Column('gestionar_proyecto', sa.Boolean, default=True, nullable=True),
-                    sa.Column('exportar_alumno', sa.Boolean, default=False, nullable=True),
-                    sa.Column('actualizar_perfil', sa.Boolean, default=True, nullable=True))
+                    sa.Column('desc', sa.String(16), unique=True, nullable=False))
 
 
 def downgrade():

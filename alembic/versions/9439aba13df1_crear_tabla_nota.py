@@ -23,6 +23,11 @@ def upgrade():
                     sa.Column('descripcion', sa.String(32), nullable=False),
                     sa.Column('porcentaje', sa.SmallInteger, nullable=False))
 
+    op.create_foreign_key('grupo_id_fk',
+                          'nota', 'grupo_notas',
+                          ['grupo_id'], ['id'],
+                          ondelete='CASCADE', onupdate='CASCADE')
+
 
 def downgrade():
     op.drop_table('nota')

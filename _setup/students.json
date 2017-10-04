@@ -1,0 +1,128 @@
+[
+	{
+		"nombres": "Jorge Yeder",
+		"apellidos": "Aliaga Guizado",
+		"id": 2009213237,
+		"sexo": 0
+	},
+	{
+		"nombres": "Yohana Milena",
+		"apellidos": "Barreto Muñoz",
+		"id": 2006125428,
+		"sexo": 1
+	},
+	{
+		"nombres": "Christian Andres",
+		"apellidos": "Cabanillas Rodriguez",
+		"id": 2009122357,
+		"sexo": 0
+	},
+	{
+		"nombres": "Angel Roberto",
+		"apellidos": "Chamorro Robles",
+		"id": 90135501,
+		"sexo": 0
+	},
+	{
+		"nombres": "Angelo Raul",
+		"apellidos": "Colca Bao",
+		"id": 2009218241,
+		"sexo": 0
+	},
+	{
+		"nombres": "Juan Carlos Raul",
+		"apellidos": "Contreras Meneses",
+		"id": 2009125322,
+		"sexo": 0
+	},
+	{
+		"nombres": "Christiam Adriano Israel",
+		"apellidos": "Cuadros Morales",
+		"id": 2007204370,
+		"sexo": 0
+	},
+	{
+		"nombres": "Sanny Cosset",
+		"apellidos": "Flores Montes",
+		"id": 2010201520,
+		"sexo": 1
+	},
+	{
+		"nombres": "Julio Cesar",
+		"apellidos": "Florian Herrera",
+		"id": 2003121464,
+		"sexo": 0
+	},
+	{
+		"nombres": "Roberto Steve",
+		"apellidos": "Hernandez Valdez",
+		"id": 2003207956,
+		"sexo": 0
+	},
+	{
+		"nombres": "Gerardo Daniel",
+		"apellidos": "Huerta Macedo",
+		"id": 2006219543,
+		"sexo": 0
+	},
+	{
+		"nombres": "Elvis Bryan",
+		"apellidos": "Llamoca Quispe",
+		"id": 2010206487,
+		"sexo": 0
+	},
+	{
+		"nombres": "Christian Alvaro",
+		"apellidos": "Miraval Albornoz",
+		"id": 2009215141,
+		"sexo": 0
+	},
+	{
+		"nombres": "Karla Magaly",
+		"apellidos": "Peña Dueñas",
+		"id": 2009110052,
+		"sexo": 1
+	},
+	{
+		"nombres": "Gefferson Frans",
+		"apellidos": "Pillaca Gonzales",
+		"id": 2008221943,
+		"sexo": 0
+	},
+	{
+		"nombres": "Silvia Rocio",
+		"apellidos": "Tarqui Tipo",
+		"id": 2009120996,
+		"sexo": 1
+	},
+	{
+		"nombres": "Jhon Neil",
+		"apellidos": "Trujillo Serrano",
+		"id": 2009105154,
+		"sexo": 0
+	},
+	{
+		"nombres": "Christian Reynaldo",
+		"apellidos": "Yanayaco Diaz",
+		"id": 2009221723,
+		"sexo": 0
+	},
+	{
+		"nombres": "Jaime Antonio",
+		"apellidos": "Zevallos Melgarejo",
+		"id": 2005204664,
+		"sexo": 0
+	},
+	{
+		"nombres": "Erika",
+		"apellidos": "Villavicencio Cabrera",
+		"id": 2012142319,
+		"sexo": 1
+	},
+	{
+		"nombres": "Benjamin Antonio",
+		"apellidos": "Valdez Arias",
+		"id": 2003129604,
+		"sexo": 0
+	}
+]

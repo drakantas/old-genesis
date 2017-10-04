@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "desc": "Estudiante"
+  },
+  {
+    "id": 2,
+    "desc": "Profesor"
+  },
+  {
+    "id": 3,
+    "desc": "Secretario"
+  },
+  {
+    "id": 4,
+    "desc": "Director"
+  }
+]

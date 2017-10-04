@@ -41,8 +41,8 @@ class StudentsList(View):
                         AS INT)
                             FROM asistencia
                             RIGHT JOIN ciclo_academico
-                                    ON ciclo_academico.fecha_comienzo <= asistencia.fecha AND
-                                       ciclo_academico.fecha_fin >= asistencia.fecha
+                                    ON ciclo_academico.fecha_comienzo <= asistencia.fecha_registro AND
+                                       ciclo_academico.fecha_fin >= asistencia.fecha_registro
                        WHERE asistencia.alumno_id = usuario.id
                        HAVING COUNT(*) >= 1),
                     0) AS asistencia,
@@ -61,7 +61,6 @@ class StudentsList(View):
                       escuela = $3 AND
                       nombres != '' AND
                       apellidos != '' AND
-                      activo = TRUE AND
                       autorizado = TRUE AND
                       deshabilitado = FALSE
                 LIMIT $4
@@ -175,7 +174,7 @@ class RegisterAttendance(View):
         async with dbi.acquire() as connection:
             async with connection.transaction():
                 query = '''
-                    INSERT INTO asistencia (alumno_id, profesor_id, fecha, observacion, asistio)
+                    INSERT INTO asistencia (alumno_id, profesor_id, fecha_registro, observacion, asistio)
                     VALUES {0}
                     RETURNING true;
                 '''.format(','.join(['({})'.format(
