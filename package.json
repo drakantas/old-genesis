@@ -23,6 +23,7 @@
     "laravel-mix": "^1.4.2"
   },
   "dependencies": {
+    "axios": "^0.16.2",
     "bootstrap-sass": "^3.3.7",
     "bootstrap-select": "^1.12.4",
     "cross-env": "^5.0.5",

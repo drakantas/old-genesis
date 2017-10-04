@@ -1,9 +1,9 @@
 from datetime import datetime
-from aiohttp.web import View
+from aiohttp.web import View, json_response
 from asyncpg.pool import PoolConnectionHolder
 
 from utils.map import map_users
-from utils.helpers import view as view
+from utils.helpers import view as view, flatten
 
 
 class StudentsList(View):
@@ -80,12 +80,44 @@ class StudentsList(View):
 
 class ReadAttendanceReport(View):
     async def get(self):
-        pass
+        student_id = int(self.request.match_info['student_id'])
+
+        school_term = await self.fetch_school_term(self.request.app.db)
+        schedules = await self.fetch_schedules(school_term['id'], self.request.app.db)
+        attendances = dict()
+
+        for schedule in schedules:
+            attendances[schedule['id']] = await self.fetch_attendance_for_schedule(student_id,
+                                                                                   school_term['id'],
+                                                                                   self.request.app.db)
+
+        result_data = {
+            'school_term': school_term,
+            'schedules': schedules,
+            'attendances': attendances
+        }
+
+        return json_response(flatten(result_data), status=200)
+
+
+    @staticmethod
+    async def fetch_attendance_for_schedule(student: int, schedule: int, dbi: PoolConnectionHolder):
+        query = '''
+            SELECT fecha_registro, asistio
+            FROM asistencia
+            WHERE alumno_id = $1 AND
+                  horario_id = $2
+        '''
+
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(student, schedule)
 
     @staticmethod
     async def fetch_schedules(school_term: int, dbi: PoolConnectionHolder):
         query = '''
-            SELECT profesor_id, nombres, apellidos, dia_clase, hora_comienzo, hora_fin
+            SELECT horario_profesor.id, profesor_id, nombres as profesor_nombres,
+                   apellidos as profesor_apellidos, dia_clase, hora_comienzo,
+                   hora_fin
             FROM horario_profesor
             LEFT JOIN usuario
                    ON usuario.id = profesor_id
@@ -97,7 +129,7 @@ class ReadAttendanceReport(View):
     @staticmethod
     async def fetch_school_term(dbi: PoolConnectionHolder):
         query = '''
-            SELECT fecha_comienzo, fecha_fin
+            SELECT id, fecha_comienzo, fecha_fin
             FROM ciclo_academico
             WHERE $1 >= fecha_comienzo AND
                   $1 <= fecha_fin
@@ -199,7 +231,7 @@ class RegisterAttendance(View):
     @staticmethod
     async def fetch_school_term(dbi: PoolConnectionHolder):
         query = '''
-            SELECT fecha_comienzo, fecha_fin
+            SELECT id, fecha_comienzo, fecha_fin
             FROM ciclo_academico
             WHERE $1 >= fecha_comienzo AND
                   $1 <= fecha_fin
@@ -215,6 +247,7 @@ routes = {
         "list/{display_amount:(?:10|25|all)}": StudentsList
     },
     "attendance": {
-        "register": RegisterAttendance
+        "register": RegisterAttendance,
+        "student-report/{student_id:[1-9][0-9]*}": ReadAttendanceReport
     }
 }
