@@ -2,16 +2,6 @@
 
 {% block content %}
     <div class="content_wrapper padded">
-        <div class="row management-page-search">
-            <div class="col-sm-9">
-                <input class="form-control" id="searchStudent" placeholder="Buscar alumno">
-            </div>
-            <div class="col-sm-3">
-                <input type="button" class="btn btn-primary" value="Buscar">
-            </div>
-        </div>
-    </div>
-    <div class="content_wrapper padded">
         <div class="row students_list_header">
             <div class="col-sm-6">
             </div>
@@ -20,14 +10,16 @@
         </div>
         <hr class="divider">
         <form method="POST">
-            {% if result %}
-                <div class="alert alert-success" role="alert">
-                    Se registró la asistencia de los alumnos correctamente.
-                </div>
-            {% else %}
-                <div class="alert alert-danger" role="alert">
-                    No se pudo registrar la asistencia de los alumnos.
-                </div>
+            {% if result is defined%}
+                {% if result %}
+                    <div class="alert alert-success" role="alert">
+                        Se registró la asistencia de los alumnos correctamente.
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger" role="alert">
+                        No se pudo registrar la asistencia de los alumnos.
+                    </div>
+                {% endif %}
             {% endif %}
             <table class="table table-striped">
                 <thead>
