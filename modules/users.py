@@ -168,7 +168,7 @@ class Registration(View):
                 INSERT INTO usuario (id, tipo_documento, credencial, nombres,
                                      apellidos, correo_electronico, escuela, autorizado,
                                      deshabilitado, fecha_creacion, fecha_ultima_actualizacion,
-                                     role_id) 
+                                     rol_id) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, $8, $9, $15)
                 RETURNING id
             ), archivo AS (
