@@ -200,36 +200,32 @@ class ReadAttendanceReport(View):
 class RegisterAttendance(View):
     @view('attendance.register')
     async def get(self, user: dict):
-        semester, students = await self.get_semester_and_students(user['escuela'])
+        students = await self.fetch_students(user['escuela'], self.request.app.db)
+        schedule = await self.fetch_teacher_schedule(user['id'], self.request.app.db)
 
-        return {'semester': semester,
+        return {'schedule': schedule,
                 'students': students}
 
-    @view('teacher.register_attendance')
+    @view('attendance.register')
     async def post(self, user: dict):
-        semester, students = await self.get_semester_and_students(user['escuela'])
+        students = await self.fetch_students(user['escuela'], self.request.app.db)
+        schedule = await self.fetch_teacher_schedule(user['id'], self.request.app.db)
 
-        if not semester:
+        if not schedule:
             raise ValueError
 
         data = dict(await self.request.post())
         data = await self.convert_data(data, students)
-        data = await self.format_data(data, user)
+        data = await self.format_data(data, schedule)
 
         result = await self.register_attendance(data, self.request.app.db)
 
         if isinstance(result, list):
             result = True
 
-        return {'semester': semester,
+        return {'schedule': schedule,
                 'students': students,
                 'result': result}
-
-    async def get_semester_and_students(self, school: int):
-        semester = await self.fetch_school_term(self.request.app.db)
-        students = await self.fetch_students(school, self.request.app.db)
-
-        return semester, students
 
     @staticmethod
     async def convert_data(data: dict, students: list) -> list:
@@ -255,16 +251,16 @@ class RegisterAttendance(View):
         return new_data
 
     @staticmethod
-    async def format_data(data: list, user: dict) -> list:
+    async def format_data(data: list, schedule: dict) -> list:
         current_time = datetime.utcnow()
-        return [[s[0], user['id'], current_time, s[1], s[2]] for s in data]
+        return [[s[0], schedule['id'], current_time, s[1], s[2]] for s in data]
 
     @staticmethod
     async def register_attendance(data: list, dbi: PoolConnectionHolder):
         async with dbi.acquire() as connection:
             async with connection.transaction():
                 query = '''
-                    INSERT INTO asistencia (alumno_id, profesor_id, fecha_registro, observacion, asistio)
+                    INSERT INTO asistencia (alumno_id, horario_id, fecha_registro, observacion, asistio)
                     VALUES {0}
                     RETURNING true;
                 '''.format(','.join(['({})'.format(
@@ -287,16 +283,25 @@ class RegisterAttendance(View):
             return await (await connection.prepare(query)).fetch(role, school)
 
     @staticmethod
-    async def fetch_school_term(dbi: PoolConnectionHolder):
+    async def fetch_teacher_schedule(teacher: int, dbi: PoolConnectionHolder):
         query = '''
-            SELECT id, fecha_comienzo, fecha_fin
-            FROM ciclo_academico
-            WHERE $1 >= fecha_comienzo AND
-                  $1 <= fecha_fin
+            WITH ciclo_acad AS (
+                SELECT id
+                FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin
+                LIMIT 1
+            )
+            SELECT horario_profesor.id, ciclo_id, profesor_id, dia_clase, hora_comienzo, hora_fin
+            FROM horario_profesor
+            LEFT JOIN ciclo_academico
+                   ON ciclo_academico.id = horario_profesor.ciclo_id
+            WHERE ciclo_id = (SELECT id FROM ciclo_acad) AND
+                  profesor_id = $2
             LIMIT 1
         '''
         async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetch(datetime.utcnow())
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), teacher)
 
 
 routes = {
