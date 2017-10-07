@@ -66,7 +66,7 @@ class ApproveUsers(View):
                     ON usuario.id = solicitud_autorizacion.alumno_id
             INNER JOIN archivo
                     ON archivo.id = solicitud_autorizacion.archivo_id
-            WHERE rol_id IS NULL AND
+            WHERE rol_id=1 AND
                   escuela=$1 AND
                   autorizado=FALSE AND
                   deshabilitado=FALSE

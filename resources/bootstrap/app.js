@@ -13,6 +13,8 @@ require('moment');
 // Bootstrap plugins
 require('eonasdan-bootstrap-datetimepicker');
 require('bootstrap-select');
+require('metismenu');
 
+require('../js/main_menu')
 require('../js/school_term');
 require('../js/attendance');
