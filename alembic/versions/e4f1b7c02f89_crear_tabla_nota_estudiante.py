@@ -20,7 +20,7 @@ def upgrade():
     op.create_table('nota_estudiante',
                     sa.Column('nota_id', sa.Integer, primary_key=True),
                     sa.Column('estudiante_id', sa.Integer, primary_key=True),
-                    sa.Column('valor', sa.Numeric(scale=2, precision=2), nullable=False))
+                    sa.Column('valor', sa.Numeric(scale=4, precision=2), nullable=False))
 
     op.create_foreign_key('nota_id_fk',
                           'nota_estudiante', 'nota',

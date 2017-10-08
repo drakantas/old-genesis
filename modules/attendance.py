@@ -3,7 +3,7 @@ from aiohttp.web import View, json_response
 from asyncpg.pool import PoolConnectionHolder
 
 from utils.map import map_users
-from utils.helpers import view as view, flatten
+from utils.helpers import view, flatten
 
 
 class StudentsList(View):

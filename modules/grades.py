@@ -1,9 +1,70 @@
 from datetime import datetime
-from aiohttp.web import View, json_response
+from aiohttp.web import View, json_response, HTTPNotFound
 from asyncpg.pool import PoolConnectionHolder
 
-from utils.helpers import view as view, flatten
+from utils.helpers import view, flatten
 
+
+class ClassGrades(View):
+    """
+        Esta vista se encarga de mostrar los reportes de notas de 1 ciclo académico.
+        -----
+        @view(...) es un decorador, se debe de pasar un string, el cual es la dirección al template que se va a
+        mostrar.
+        No es necesario ingresar la extensión, y preferible delimitar las carpetas con un .
+        Ejemplo: Quiero que el método get nos muestre el template views/grades/class_report.html entonces ingreso
+        @view('grades.class_report')
+        -----
+        Todos los metodos decorados por @view recibirán un argumento, este será el usuario y es un diccionario.
+        -----
+        Solo decorar los métodos que se están implementando, sea GET o POST, etc.
+    """
+    @view('grades.class_report')
+    async def get(self, user: dict):
+        # Primero necesitamos obtener el ciclo académico, sea el actual o uno que se ingresó en la uri
+        if 'school_term' in self.request.match_info:  # Si se encuentra el parametro en la uri
+            school_term_id = int(self.request.match_info['school_term'])  # Castear el valor a entero
+            school_term = await self.school_term_exists(school_term_id, self.request.app.db)
+
+            if not school_term:  # Si el ciclo académico no se encontró
+                raise HTTPNotFound  # Se levanta 404
+        else:
+            # Si no se pasó el parametro school_term en la uri, tratamos de obtener el ciclo académico actual
+            school_term = await self.fetch_school_term(self.request.app.db)
+
+            if not school_term:
+                # En este caso, no hay un ciclo académico registrado, pero no podemos tirar 404
+                # pues no se pasó un parámetro de ciclo académico que no existe, informamos al usuario que no hay un
+                # ciclo académico registrado, por lo tanto no hay data a mostrar.
+                return {'message': 'No se encontró un ciclo académico registrado para este preciso momento. '
+                                   'Puedes seleccionar un ciclo académico previo en el selector superior.'}
+
+
+
+    @staticmethod
+    async def school_term_exists(school_term: int, dbi: PoolConnectionHolder):
+        # Retornará verdadero si existe el ciclo académico
+        query = '''
+                    SELECT true
+                    FROM ciclo_academico
+                    WHERE id = $1
+                    LIMIT 1
+                '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school_term)  # fetchval = valor
+
+    @staticmethod
+    async def fetch_school_term(dbi: PoolConnectionHolder):
+        # Retornará el ciclo académico en este preciso momento
+        query = '''
+                    SELECT id, fecha_comienzo, fecha_fin
+                    FROM ciclo_academico
+                    WHERE $1 >= fecha_comienzo AND
+                          $1 <= fecha_fin
+                    LIMIT 1
+                '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow())  # fetchrow = entrada, dict
 
 class ReadGradeReport(View):
     async def get(self):

@@ -20,7 +20,7 @@ def upgrade():
     op.create_table('promedio_notas_ciclo',
                     sa.Column('ciclo_acad_id', sa.Integer, primary_key=True),
                     sa.Column('estudiante_id', sa.Integer, primary_key=True),
-                    sa.Column('valor', sa.Numeric(scale=2, precision=2), nullable=False))
+                    sa.Column('valor', sa.Numeric(scale=4, precision=2), nullable=False))
 
     op.create_foreign_key('ciclo_acad_id_fk',
                           'promedio_notas_ciclo', 'ciclo_academico',
