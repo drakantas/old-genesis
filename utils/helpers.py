@@ -1,5 +1,5 @@
 from asyncpg import Record
-from math import ceil, floor
+from decimal import Decimal
 from aiohttp.web import View
 from datetime import datetime
 from typing import Union, List, Dict
@@ -68,6 +68,8 @@ def flatten(data: Union[List, Dict, Record], time_config: dict) -> Union[List, D
                 _data[k] = humanize_datetime(v, **time_config)
             elif isinstance(v, (Record, dict, list)):
                 _data[k] = flatten(v, time_config)
+            elif isinstance(v, Decimal):
+                _data[k] = float(v)
             else:
                 _data[k] = v
 
@@ -80,6 +82,8 @@ def flatten(data: Union[List, Dict, Record], time_config: dict) -> Union[List, D
                 _data.append(humanize_datetime(e, **time_config))
             elif isinstance(e, (Record, dict, list)):
                 _data.append(flatten(e, time_config))
+            elif isinstance(v, Decimal):
+                _data.append(float(e))
             else:
                 _data.append(e)
     else:
