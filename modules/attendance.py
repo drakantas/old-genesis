@@ -90,14 +90,14 @@ class ReadAttendanceReport(View):
                 school_term = {'id': school_term_id}
                 del school_term_id
             else:
-                # Precondition failed, school term not found
-                return json_response({}, status=412)
+                # No se encontró ciclo académico
+                return json_response({'message': 'Ciclo académico no encontrado'}, status=404)
         else:
             school_term = await self.fetch_school_term(self.request.app.db)
 
             if not school_term:
-                # Precondition failed, no school term registered as of now
-                return json_response({}, status=412)
+                # No hay ciclo académico registrado para esta fecha
+                return json_response({'message': 'No se encontró un ciclo académico para esta fecha'}, status=412)
 
         schedules = await self.fetch_schedules(school_term['id'], self.request.app.db)
         attendances = dict()
