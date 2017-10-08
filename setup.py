@@ -36,7 +36,7 @@ def parse_data(data: list):
                'deshabilitado': False}
 
 
-async def do_transaction(data: list, table: str, dbi: PoolConnectionHolder) -> str:
+async def do_transaction(data: list, table: str, returning: str, dbi: PoolConnectionHolder) -> str:
     columns = data[0].keys()
     values = list()
 
@@ -53,8 +53,8 @@ async def do_transaction(data: list, table: str, dbi: PoolConnectionHolder) -> s
     query = '''
         INSERT INTO {table} {columns}
         VALUES {values}
-        RETURNING id;
-    '''.format(table=table, columns='("' + '", "'.join(columns) + '")', values=values)
+        RETURNING {returning};
+    '''.format(table=table, columns='("' + '", "'.join(columns) + '")', values=values, returning=returning)
 
     async with dbi.acquire() as connection:
         async with connection.transaction():
@@ -69,10 +69,25 @@ def main():
     _roles_data = list(loop.run_until_complete(get_data(roles_data)))
 
     pool = loop.run_until_complete(create_pool(dsn=db_dsn))
-    roles = loop.run_until_complete(do_transaction(_roles_data, 'rol_usuario', pool))
-    students = loop.run_until_complete(do_transaction(_students_data, 'usuario', pool))
 
-    print(list(roles), list(students))
+    school_term = loop.run_until_complete(do_transaction([{
+        'fecha_comienzo': '2017-10-01 00:00:00',
+        'fecha_fin': '2017-10-31 23:59:00'
+    }], 'ciclo_academico', 'id', pool))
+
+    roles = loop.run_until_complete(do_transaction(_roles_data, 'rol_usuario', 'id', pool))
+    students = loop.run_until_complete(do_transaction(_students_data, 'usuario', 'id', pool))
+
+    def map_registration(student: dict) -> dict:
+        return {
+            'estudiante_id': student['id'],
+            'ciclo_acad_id': school_term[0]['id']
+        }
+
+    registrations = loop.run_until_complete(do_transaction(list(map(map_registration, students)),
+                                                           'matricula', 'estudiante_id, ciclo_acad_id', pool))
+
+    print(list(registrations))
 
 
 if __name__ == '__main__':

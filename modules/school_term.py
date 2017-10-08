@@ -56,15 +56,19 @@ class CreateSchoolTerm(View):
                 result_data['errors'] = _e
             else:
                 validation_groups = await self._get_validation_groups(data)
-                validation_rules = await self._build_validation_groups(validation_groups, data)
 
-                _validation_errors = await validator.validate(validation_rules, self.request.app.db)
-
-                if _validation_errors:
-                    result_data['errors'] = _validation_errors
+                if not validation_groups:
+                    result_data['errors'].append('No se enviaron los campos de horario correctamente')
                 else:
-                    await self.create(validation_groups, data, self.request.app.db)
-                    result_data['success'] = 'Se ha creado el ciclo académico exitosamente.'
+                    validation_rules = await self._build_validation_groups(validation_groups, data)
+
+                    _validation_errors = await validator.validate(validation_rules, self.request.app.db)
+
+                    if _validation_errors:
+                        result_data['errors'] = _validation_errors
+                    else:
+                        await self.create(validation_groups, data, self.request.app.db)
+                        result_data['success'] = 'Se ha creado el ciclo académico exitosamente'
 
             del _e
 
