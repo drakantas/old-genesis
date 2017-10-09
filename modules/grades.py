@@ -1,10 +1,12 @@
 from typing import Union
+from decimal import Decimal
 from datetime import datetime
-from aiohttp.web import View, json_response, HTTPNotFound
 from asyncpg.pool import PoolConnectionHolder
+from aiohttp.web import View, json_response, HTTPNotFound
 
-from utils.helpers import view, flatten
 from utils.map import map_users
+from utils.validator import validator
+from utils.helpers import view, flatten
 
 
 class ClassGrades(View):
@@ -317,6 +319,109 @@ class ReadGradeReport(View):
             return await (await connection.prepare(query)).fetchrow(datetime.utcnow())
 
 
+class AssignGrade(View):
+    async def post(self):
+        data = await self.request.post()
+
+        if 'student_id' not in data and 'grade_id' not in data and 'score' not in data:
+            return json_response(status=400)  # Request malformado...
+
+        errors = await self.validate(data)
+        school_term = await self.fetch_school_term(self.request.app.db)
+
+        if not school_term:
+            return json_response({'error': 'No se encontro un ciclo academico para esta fecha'}, status=400)
+
+        if errors:
+            return json_response({'error': errors}, status=400)
+        else:
+            student_id = await self._get_student(school_term['id'], data['student_id'])
+
+            if not student_id:
+                return json_response({'error': 'No se encontro al estudiante'}, status=400)
+
+            grade_id = await self._get_grade(school_term['id'], int(data['grade_id']))
+
+            if not grade_id:
+                return json_response({'error': 'No se encontro la nota que quiere registrar'}, status=400)
+
+            if await self._assigned(grade_id, student_id):
+                return json_response({'error': 'Esta nota ya ha sido asignada, no se puede cambiar'}, status=400)
+
+            await self.create(grade_id, student_id, Decimal(data['score']))
+
+        return json_response({'success': 'Se ha registrado la nota exitosamente'})
+
+    async def validate(self, data: dict):
+        return await validator.validate([
+            ['ID de estudiante', data['student_id'], 'digits'],
+            ['Nota', data['grade_id'], 'digits'],
+            ['Puntaje', data['score'], 'len:1,4|numeric|custom', self._validate_score]
+        ], self.request.app.db)
+
+    async def create(self, grade_id: int, student_id: int, score: Decimal):
+        query = '''
+            INSERT INTO nota_estudiante (nota_id, estudiante_id, valor)
+            VALUES ($1, $2, $3)
+            RETURNING true
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(grade_id, student_id, score)
+
+    async def _assigned(self, grade_id: int, student_id: int):
+        query = '''
+            SELECT true
+            FROM nota_estudiante
+            WHERE nota_estudiante.nota_id = $1 AND
+                  nota_estudiante.estudiante_id = $2
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(grade_id, student_id) or False
+
+    async def _get_grade(self, school_term: int, grade_id: int):
+        query = '''
+            SELECT estructura_notas.nota_id
+            FROM estructura_notas
+            WHERE estructura_notas.ciclo_acad_id = $1 AND
+                  estructura_notas.nota_id = $2
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school_term, grade_id)
+
+    async def _get_student(self, school_term: int, value: int) -> int:
+        async with self.request.app.db.acquire() as connection:
+            query = '''
+                SELECT id
+                FROM usuario
+                RIGHT JOIN matricula
+                        ON matricula.estudiante_id = usuario.id
+                WHERE matricula.ciclo_acad_id = $1 AND
+                      usuario.id = $2
+            '''
+            return await (await connection.prepare(query)).fetchval(school_term, value)
+
+    @staticmethod
+    async def _validate_score(name: str, value: str, *args):
+        _value = float(value)
+
+        if not 0 <= _value <= 20:
+            return '{} debe de estar en el rango de 0 a 20'.format(name)
+
+    @staticmethod
+    async def fetch_school_term(dbi: PoolConnectionHolder):
+        query = '''
+                SELECT id, fecha_comienzo, fecha_fin
+                FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin
+                LIMIT 1
+            '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow())
+
+
 routes = {
     'grades': {
         'class-report': ClassGrades,
@@ -324,6 +429,7 @@ routes = {
         'student-report': {
             '{student_id:[1-9][0-9]*}': ReadGradeReport,
             'school-term-{school_term:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadGradeReport
-        }
+        },
+        'assign': AssignGrade
     }
 }

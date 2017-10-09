@@ -6,6 +6,7 @@ from asyncpg.pool import PoolConnectionHolder
 
 
 DIGITS = r'[0-9]+'
+NUMERIC = r'[0-9]+\.?[0-9]*'
 LETTERS = r'[a-zA-Z]+'
 LENGTH_RULE = r'len:([0-9]+|[0-9]+\,[0-9]+)'
 UNIQUE_RULE = r'unique:.+\,.+'
@@ -26,6 +27,7 @@ class Validator:
     def __init__(self):
         self.digits = re.compile(DIGITS)
         self.letters = re.compile(LETTERS)
+        self.numeric = re.compile(NUMERIC)
         self.length_rule = re.compile(LENGTH_RULE)
         self.unique_rule = re.compile(UNIQUE_RULE)
         self.restricted_value = re.compile(RESTRICTED_VALUE)
@@ -68,6 +70,9 @@ class Validator:
         elif rule in ('letters', 'LETTERS'):
             if not self._only_letters(value):
                 return '{} solo puede contener letras'.format(name)
+        elif rule in ('numeric', 'NUMERIC'):
+            if not self._numeric(value):
+                return '{} debe ser un número flotante o entero'.format(name)
         elif rule in ('email', 'EMAIL'):
             if not await self.regexinator.validate(value, strategy='EMAIL'):
                 return '{} debe ser de formato john@example.com'.format(name)
@@ -109,6 +114,12 @@ class Validator:
 
     def _only_digits(self, value: str) -> bool:
         if self.digits.fullmatch(value):
+            return True
+
+        return False
+
+    def _numeric(self, value: str) -> bool:
+        if self.numeric.fullmatch(value):
             return True
 
         return False
