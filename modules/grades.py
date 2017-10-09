@@ -92,7 +92,6 @@ class ClassGrades(View):
         return {'headers': headers,
                 'students': students}
 
-
     @staticmethod
     async def fetch_grade_headers(school_term: int, dbi: PoolConnectionHolder):
         query = '''
@@ -271,6 +270,8 @@ class ReadGradeReport(View):
 
 routes = {
     'grades': {
+        'class-report': ClassGrades,
+        'class-report/school-term-{school_term:[1-9][0-9]*}': ClassGrades,
         'student-report': {
             '{student_id:[1-9][0-9]*}': ReadGradeReport,
             'school-term-{school_term:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadGradeReport
