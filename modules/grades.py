@@ -322,7 +322,7 @@ class ReadGradeReport(View):
 class AssignGrade(View):
     async def post(self):
         data = await self.request.post()
-        print(data)
+        
         if 'student_id' not in data and 'grade_id' not in data and 'score' not in data:
             return json_response({'error': 'No se envio la data necesaria.'}, status=400)  # Request malformado...
 
