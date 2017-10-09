@@ -4,6 +4,7 @@ from aiohttp.web import View, json_response, HTTPNotFound
 from asyncpg.pool import PoolConnectionHolder
 
 from utils.helpers import view, flatten
+from utils.map import map_users
 
 
 class ClassGrades(View):
@@ -72,22 +73,29 @@ class ClassGrades(View):
             _group_i = find_header_group(header['grupo'], header_group)
 
             if _group_i is False:
-                header_group.append([header['grupo']])
+                header_group.append([header['grupo'], header['descripcion']])
             else:
                 header_group[_group_i].append(header['descripcion'])
 
         headers = [*header_group]
 
-        students = flatten(students, {})
+        students = map_users(students)
 
         async def map_student(student: dict) -> dict:
             grades = await self.fetch_grades(school_term['id'], student['id'], self.request.app.db)
-            grades = list(map(lambda x: float(x), grades))
+            grades = flatten(grades, {})
+            grades = list(map(lambda x: float(x['valor']) if x['valor'] is not None else '-', grades))
+            final_grade = await self.fetch_final_grade(school_term['id'], student['id'], self.request.app.db)
+
+            if final_grade is None:
+                final_grade = '-'
+
+            grades.append(final_grade)
+
             return {**student, 'grades': grades}
 
-        students = list(map(map_student, students))
-
-        print(headers, '\n', students)
+        for _student_i, _student in enumerate(students):
+            students[_student_i] = await map_student(_student)
 
         return {'headers': headers,
                 'students': students}
@@ -106,6 +114,18 @@ class ClassGrades(View):
         '''
         async with dbi.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term)
+
+    @staticmethod
+    async def fetch_final_grade(school_term: int, student_id: int, dbi: PoolConnectionHolder):
+        query = '''
+            SELECT valor
+            FROM promedio_notas_ciclo
+            WHERE ciclo_acad_id = $1 AND
+                  estudiante_id = $2
+            LIMIT 1
+        '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school_term, student_id)
 
     @staticmethod
     async def fetch_grades(school_term: int, student_id: int, dbi: PoolConnectionHolder):
@@ -127,7 +147,7 @@ class ClassGrades(View):
     async def fetch_students(school_term: int, dbi: PoolConnectionHolder):
         # Obtener los estudiantes de un ciclo académico
         query = '''
-            SELECT usuario.id, usuario.nombres, usuario.apellidos
+            SELECT usuario.id, usuario.tipo_documento, usuario.nombres, usuario.apellidos, usuario.escuela
             FROM usuario
             RIGHT JOIN matricula
                     ON matricula.estudiante_id = usuario.id AND

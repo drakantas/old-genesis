@@ -2,14 +2,52 @@
 
 {% block content %}
     <div class="content_wrapper padded">
-        <h2 style="margin-top:0;">Notas de salón</h2>
+        <h2 style="margin-top:0;">Notas de clase</h2>
         <hr class="divider">
-        <table class="table table-striped">
-            <thead>
-            </thead>
-            <tbody>
-            </tbody>
-        </table>
+        {% if message is defined %}
+            <div class="alert alert-info" role="alert">
+                {{ message }}
+            </div>
+        {% else %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <td rowspan="2">ID</td>
+                        <td rowspan="2">Nombres y apellidos</td>
+                        {% for header in headers %}
+                            {% if header is iterable and header is not string %}
+                                <td rowspan="1" colspan="{{ header|length - 1 }}">{{ header[0] }}</td>
+                            {% else %}
+                                <td rowspan="2">{{ header }}</td>
+                            {% endif %}
+                        {% endfor %}
+                        <td rowspan="2">Promedio final</td>
+                    </tr>
+                    <tr>
+                        {% for header in headers %}
+                            {% if header is iterable and header is not string %}
+                                {% for _h in header %}
+                                    {% if loop.index0 != 0 %}
+                                        <td>{{ _h }}</td>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td><abbr data-toggle="tooltip" title="{{ student.tipo_documento }}" class="student_id">{{ student.id }}</abbr></td>
+                        <td>{{ student.apellidos }} {{ student.nombres }}</td>
+                        {% for grade in student['grades'] %}
+                        <td>{{ grade }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
     </div>
 {% endblock %}
 
