@@ -208,29 +208,58 @@ class ReadGradeReport(View):
 
         grades = await self.fetch_grades(school_term['id'], student['id'], self.request.app.db)
 
+        if not grades:
+            return json_response({'messages': 'No hay estructura de notas registrada, no hay notas por ver...'},
+                                 status=412)
+
+        final_grade = await self.fetch_final_grade(school_term['id'], student['id'], self.request.app.db) or '-'
+
         result_data = flatten({
             'school_term': school_term,
             'student': student,
-            'grades': grades
+            'grades': grades,
+            'final_grade': final_grade
         }, {})
 
         del school_term, student, grades
 
-        grade_groups = dict()
+        grade_group = list()
+
+        def find_grade(grade: dict) -> Union[int, bool]:
+            for _i, _g in enumerate(grade_group):
+                if isinstance(_g, list) and _g[0]['grupo'] == grade['grupo']:
+                    return _i
+            return False
 
         for grade in result_data['grades']:
+            if grade['valor'] is None:
+                grade['valor'] = '-'
+
             if grade['grupo'] is None:
-                grade_groups[grade['nota_id']] = grade
-                continue
-
-            if grade['grupo'] not in grade_groups:
-                grade_groups[grade['grupo']] = [grade]
+                grade_group.append(grade)
             else:
-                grade_groups[grade['grupo']].append(grade)
+                _g_i = find_grade(grade)
 
-        result_data['grades'] = grade_groups
+                if _g_i is False:
+                    grade_group.append([grade])
+                else:
+                    grade_group[_g_i].append(grade)
+
+        result_data['grades'] = grade_group
 
         return json_response(result_data)
+
+    @staticmethod
+    async def fetch_final_grade(school_term: int, student_id: int, dbi: PoolConnectionHolder):
+        query = '''
+                SELECT valor
+                FROM promedio_notas_ciclo
+                WHERE ciclo_acad_id = $1 AND
+                      estudiante_id = $2
+                LIMIT 1
+            '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school_term, student_id)
 
     @staticmethod
     async def fetch_grades(school_term: int, student_id: int, dbi: PoolConnectionHolder):

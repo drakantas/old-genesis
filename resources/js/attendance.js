@@ -19,7 +19,7 @@ class Attendance
     {
         let $this = this;
 
-        $('a.attendance-btn').on('click', function(e) {
+        $('a.attendance-btn').on('click', (e) => {
             const student = $($(e.currentTarget).parent().parent().find('.student_id')[0]);
             const student_id = student.text();
 

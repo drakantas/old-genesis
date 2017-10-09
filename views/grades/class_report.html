@@ -12,23 +12,23 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <td rowspan="2">ID</td>
-                        <td rowspan="2">Nombres y apellidos</td>
+                        <th rowspan="2">ID</th>
+                        <th rowspan="2">Nombres y apellidos</th>
                         {% for header in headers %}
                             {% if header is iterable and header is not string %}
-                                <td rowspan="1" colspan="{{ header|length - 1 }}">{{ header[0] }}</td>
+                                <th rowspan="1" colspan="{{ header|length - 1 }}">{{ header[0] }}</th>
                             {% else %}
-                                <td rowspan="2">{{ header }}</td>
+                                <th rowspan="2">{{ header }}</th>
                             {% endif %}
                         {% endfor %}
-                        <td rowspan="2">Promedio final</td>
+                        <th rowspan="2">Promedio final</th>
                     </tr>
                     <tr>
                         {% for header in headers %}
                             {% if header is iterable and header is not string %}
                                 {% for _h in header %}
                                     {% if loop.index0 != 0 %}
-                                        <td>{{ _h }}</td>
+                                        <th>{{ _h }}</th>
                                     {% endif %}
                                 {% endfor %}
                             {% endif %}
