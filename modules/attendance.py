@@ -20,9 +20,31 @@ class StudentsList(View):
 
         students = await self.get_students(user['escuela'], display_amount, self.request.app.db)
         students = map_users(students)
+        dd_grades = await self.get_grades(self.request.app.db)
 
-        return {'students': students}
+        return {'students': students,
+                'dd_grades': dd_grades}
 
+    @staticmethod
+    async def get_grades(dbi: PoolConnectionHolder):
+        query = '''
+            WITH ciclo_academico AS (
+                SELECT id
+                FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin
+                LIMIT 1
+            )
+            SELECT estructura_notas.nota_id as id, nota.descripcion
+            FROM estructura_notas
+            INNER JOIN ciclo_academico
+                    ON ciclo_academico.id = estructura_notas.ciclo_acad_id
+            LEFT JOIN nota
+                   ON nota.id = estructura_notas.nota_id
+            ORDER BY estructura_notas.nota_id ASC
+        '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(datetime.utcnow())
     @staticmethod
     async def get_students(school: int, amount: int, dbi: PoolConnectionHolder, student_role_id: int = 1,
                            danger: int = 63):

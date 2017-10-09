@@ -322,9 +322,9 @@ class ReadGradeReport(View):
 class AssignGrade(View):
     async def post(self):
         data = await self.request.post()
-
+        print(data)
         if 'student_id' not in data and 'grade_id' not in data and 'score' not in data:
-            return json_response(status=400)  # Request malformado...
+            return json_response({'error': 'No se envio la data necesaria.'}, status=400)  # Request malformado...
 
         errors = await self.validate(data)
         school_term = await self.fetch_school_term(self.request.app.db)
@@ -335,7 +335,7 @@ class AssignGrade(View):
         if errors:
             return json_response({'error': errors}, status=400)
         else:
-            student_id = await self._get_student(school_term['id'], data['student_id'])
+            student_id = await self._get_student(school_term['id'], int(data['student_id']))
 
             if not student_id:
                 return json_response({'error': 'No se encontro al estudiante'}, status=400)

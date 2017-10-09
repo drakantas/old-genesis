@@ -4,9 +4,15 @@ class Grades
     {
         this.studentBtn = 'button.student_grade_report';
         this.report = '#student_grade_report';
+        this.assignGradeBtn = 'button.assign_grade';
+        this.assignGrade = '#assign_grade';
 
         this.studentBtnSelector = $(this.studentBtn);
         this.reportSelector = $(this.report);
+
+        this.assignGradeBtnSelector = $(this.assignGradeBtn);
+        this.assignGradeSelector = $(this.assignGrade);
+        this._assign = $('#assign');
 
         this.registerEvents();
     }
@@ -21,6 +27,11 @@ class Grades
         return `/grades/student-report/school-term-${school_term}/${id}`;
     }
 
+    _assignGrade()
+    {
+        return `/grades/assign`;
+    }
+
     registerEvents()
     {
         let $this = this;
@@ -31,6 +42,65 @@ class Grades
 
             $this.fetchStudentGrades(student_id);
             $this.reportSelector.modal();
+        });
+
+        this.assignGradeBtnSelector.on('click', (e) => {
+            const student = $($(e.currentTarget).parent().parent().find('.student_id')[0]);
+            const student_id = student.text();
+
+            $('#student_id').val(student_id);
+            $this.assignGradeSelector.modal();
+        });
+
+        this._assign.on('click', (e) => {
+            e.preventDefault();
+
+            const data = new FormData(this.assignGradeSelector.find('form')[0]);
+
+            axios.post($this._assignGrade(), data, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }).then(function (response) {
+                const success = `
+                    <div class="alert alert-success" role="alert">${response.data.success}</div>
+                `;
+
+                $($this.assignGradeSelector.find('.alert_wrapper')[0]).html(success);
+            }).catch(function (error) {
+                const response = error.response;
+
+                if (response.status !== 400) {
+                    console.log(error);
+                    return;
+                }
+
+                const error_message = response.data.error;
+                let _error = '';
+
+                if (Array.isArray(error_message)) {
+                    _error = `<div class="alert alert-danger" role="alert"><ul>`;
+                    for (const e of error_message) {
+                        _error = _error + `<li>${e}</li>`;
+                    }
+                    _error = _error + `</ul></div>`;
+                } else {
+                    _error = `
+                        <div class="alert alert-danger" role="alert">
+                            ${error_message}
+                        </div>
+                    `;
+                }
+
+                $($this.assignGradeSelector.find('.alert_wrapper')[0]).html(_error);
+            });
+        });
+
+        this.assignGradeSelector.on('hidden.bs.modal', function (e) {
+            $($this.assignGradeSelector.find('.alert_wrapper')[0]).html('');
+            $($this.assignGradeSelector.find('#score')[0]).val('');
+            $('#grade_id').val(1);
+            $('#grade_id').selectpicker('refresh');
         });
     }
 

@@ -1,0 +1,29 @@
+<div class="modal fade" id="assign_grade" tabindex="-1" role="dialog" aria-labelledby="assignGrade">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="assignGrade">Asignar nota</h4>
+            </div>
+            <div class="modal-body">
+                <div class="alert_wrapper"></div>
+                <form>
+                    <input type="hidden" id="student_id" name="student_id">
+                    <div class="form-group">
+                        <label for="grade_id">Nota</label>
+                        <select id="grade_id" name="grade_id" class="selectpicker" data-live-search="true" data-width="100%">
+                            {% if dd_grades is defined %}{% for _grade in dd_grades %}
+                            <option value="{{ _grade.id }}">{{ _grade.descripcion }}</option>
+                            {% endfor %}{% endif %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="score">Puntaje</label>
+                        <input id="score" name="score" class="form-control" placeholder="Puntaje" />
+                    </div>
+                    <button class="btn btn-success" id="assign" type="submit">Asignar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
