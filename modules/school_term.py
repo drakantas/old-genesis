@@ -58,6 +58,9 @@ class CreateSchoolTerm(View):
                 validation_groups = await self._get_validation_groups(data)
 
                 if not validation_groups:
+                    if 'errors' not in result_data:
+                        result_data['errors'] = list()
+
                     result_data['errors'].append('No se enviaron los campos de horario correctamente')
                 else:
                     validation_rules = await self._build_validation_groups(validation_groups, data)
