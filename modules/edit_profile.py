@@ -1,5 +1,6 @@
 from aiohttp.web import View
-from aiohttp_jinja2 import template as view
+
+from utils.helpers import view
 from utils.validator import validator
 
 
@@ -14,7 +15,10 @@ class EditProfile(View):
 
         student_id = user['id']
 
-        data = await self.request.post()
+        data = dict(await self.request.post())
+
+        if 'name' not in data or 'last_name' not in data: # Faltan agregar los otros elementos como address, email, etc... 
+            return {'errors': ['La data enviada no es la esperada...']}
 
         name, last_name, address, email = data['name'], data['last_name'], data['address'], data['email']
         phone, nationality = data['phone'], data['nationality']
