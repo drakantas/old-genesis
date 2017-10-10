@@ -58,9 +58,9 @@ class EditProfile(View):
                      school: int, district: int, gender: int):
         query = '''
             UPDATE usuario 
-            SET nombres=$2, apellidos=$3, direccion=$4, correo_electronico=$5, nro_telefono=$6, nacionalidad=$7, 
-                escuela=$8, distrito=$9, sexo=$10, credencial=$11
-            WHERE id_=$1
+            SET nombres = $2, apellidos = $3, direccion = $4, correo_electronico = $5, nro_telefono = $6,
+                nacionalidad = $7, escuela = $8, distrito = $9, sexo = $10, credencial = $11
+            WHERE id = $1
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(id_, name, last_name, address,
