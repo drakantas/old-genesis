@@ -17,16 +17,22 @@
         </div>
         {% endif %}
         <div class="row">
-            <form method="post" action="/settings/update-avatar">
+            <form method="post" action="/settings/update-avatar" accept-charset="utf-8" enctype="multipart/form-data">
                 <div class="col-md-6">
                     <div class="text-center">
-                        <img width="202" height="202" class="thumbnail" style="display:inline-block;" />
+                        <div class="thumbnail" style="display:inline-block;margin:0;">
+                            {% if user.avatar is none %}
+                            <div style="height:204px;width:204px;display:inline-block;background-size:cover;background-position:50% 50%;background-image: url();"></div>
+                            {% else %}
+                            <div style="height:204px;width:204px;display:inline-block;background-size:cover;background-position:50% 50%;background-image: url(data:image/png;base64,{{ user.avatar.decode('utf-8') }});"></div>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="row">
                         <div class="col-md-9">
                             <div class="form-group">
                                 <label for="avatar">Nuevo avatar</label>
-                                <input type="file" id="avatar" class="form-control" />
+                                <input type="file" id="avatar" name="avatar" class="form-control" />
                             </div>
                         </div>
                         <div class="col-md-3">

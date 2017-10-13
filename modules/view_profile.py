@@ -1,5 +1,6 @@
 from aiohttp.web import View, HTTPNotFound
 
+from utils.map import map_users
 from utils.helpers import view
 
 
@@ -17,12 +18,13 @@ class ReadProfile(View):
         if not _user:
             raise HTTPNotFound  # No se encontró al usuario, 404
         
-        return {'requested_user': _user}
+        return {'requested_user': map_users([_user])[0]}
     
     async def get_user(self, user_id: int):
         query = '''
-            SELECT id, nombres, apellidos, direccion, correo_electronico, nro_telefono,
-            		nacionalidad, escuela, distrito, sexo
+            SELECT id, tipo_documento, nombres, apellidos,
+                   direccion, correo_electronico, nro_telefono, nacionalidad,
+                   escuela, distrito, sexo, avatar
             FROM usuario
             WHERE id = $1
             LIMIT 1

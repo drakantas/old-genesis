@@ -71,7 +71,15 @@
         <div class="dropdown">
             <a class="btn btn-default dropdown-toggle user_card" type="button" id="userOptions" data-toggle="dropdown">
                 <div class="avatar">
+                    {% if user.avatar is none %}
+                    {% if user.sexo is none or user.sexo == 0 %}
                     <div class="user_avatar default_male" style=""></div>
+                    {% elif user.sexo == 1 %}
+                    <div class="user_avatar default_female" style=""></div>
+                    {% endif %}
+                    {% else %}
+                    <div class="user_avatar" style="background-image: url(data:image/png;base64,{{ user.avatar.decode('utf-8') }});"></div>
+                    {% endif %}
                 </div>
                 <div class="middle_content">
                     {{ user.nombres }} <span class="user_role">{{ user.rol }}</span>

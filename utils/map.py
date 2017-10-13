@@ -1,9 +1,14 @@
-from typing import Generator, Union
+from typing import Generator, Union, List
 
 data_map = {
     'id_types': {
         0: 'DNI',
         1: 'Carné de extranjería'
+    },
+
+    'sexes': {
+        0: 'Masculino',
+        1: 'Femenino'
     },
 
     'schools': {
@@ -52,9 +57,13 @@ def parse_data_key(k: Union[int, str], data_set_: str) -> str:
     return data_set[k]
 
 
-def map_users(users: Generator) -> list:
+def map_users(users: Union[Generator, List]) -> list:
     def _convert_data_keys(user: dict) -> dict:
-        user['escuela'] = parse_data_key(user['escuela'], 'schools')
-        user['tipo_documento'] = parse_data_key(user['tipo_documento'], 'id_types')
+        if 'escuela' in user:
+            user['escuela'] = parse_data_key(user['escuela'], 'schools')
+        if 'tipo_documento' in user:
+            user['tipo_documento'] = parse_data_key(user['tipo_documento'], 'id_types')
+        if 'sexo' in user:
+            user['sexo'] = parse_data_key(user['sexo'], 'sexes')
         return user
     return list(map(_convert_data_keys, [dict(user) for user in users]))

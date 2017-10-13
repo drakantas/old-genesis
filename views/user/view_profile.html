@@ -6,12 +6,12 @@
         <hr class="divider" />
         <div class="row">
             <div class="col-sm-6">
-                    <h4>Nro de documento: </h4>
+                    <h4># de documento: </h4>
                     <span>{{ requested_user.id }} </span><br /><br />
-                    <h4>Fecha de nacimiento: </h4>
-                    <span>20/07/1993</span><br /><br />
+                    <h4>Tipo de documento: </h4>
+                    <span>{{ requested_user.tipo_documento }}</span><br /><br />
                     <h4>Facultad: </h4>
-                    <span>Ingenieria de Sistemas</span><br /><br />
+                    <span>{{ requested_user.escuela }}</span><br /><br />
                     <h4>Correo electronico: </h4>
                     <span>{{ requested_user.correo_electronico }} </span><br /><br />
                     <h4>Direccion: </h4>
@@ -27,12 +27,19 @@
             </div>
             <div class="col-sm-6">
                 <div class="text-left">
-                    <img src="" class="thumbnail" width="214" height="214" style="display:inline-block;margin:0;"><br /><br />
+                    <div class="thumbnail" style="display:inline-block;margin:0;">
+                        {% if requested_user.avatar is none %}
+                        <div style="height:204px;width:204px;display:inline-block;background-size:cover;background-position:50% 50%;background-image: url();"></div>
+                        {% else %}
+                        <div style="height:204px;width:204px;display:inline-block;background-size:cover;background-position:50% 50%;background-image: url(data:image/png;base64,{{ requested_user.avatar.decode('utf-8') }});"></div>
+                        {% endif %}
+                    </div>
+                    <br /><br />
                 </div>
                 <h4>Nacionalidad: </h4>
                 <span>Peruano</span><br /><br />
                 <h4>Sexo: </h4>
-                <span>Masculino </span><br /><br />
+                <span>{{ requested_user.sexo }}</span><br /><br />
             </div>
         </div>
     </div>

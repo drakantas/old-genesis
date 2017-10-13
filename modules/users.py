@@ -1,11 +1,12 @@
 from typing import Union
+from base64 import b64encode
 from datetime import datetime
 from aiohttp_session import get_session
 from bcrypt import hashpw, checkpw, gensalt
-from aiohttp_jinja2 import template as view
+from aiohttp_jinja2 import template
 from aiohttp.web import View, web_request, HTTPFound
 
-from utils.helpers import pass_user
+from utils.helpers import pass_user, view
 from utils.validator import validator
 
 
@@ -14,11 +15,11 @@ class FailedAuth(Exception):
 
 
 class Login(View):
-    @view('user/login.html')
+    @template('user/login.html')
     async def get(self) -> dict:
         return {'location': 'login'}
 
-    @view('user/login.html')
+    @template('user/login.html')
     async def post(self) -> dict:
         display_data = {'location': 'login'}
 
@@ -81,11 +82,11 @@ class Login(View):
 
 
 class Registration(View):
-    @view('user/new.html')
+    @template('user/new.html')
     async def get(self) -> dict:
         return {'location': 'registration'}
 
-    @view('user/new.html')
+    @template('user/new.html')
     async def post(self) -> dict:
         display_data = {'location': 'registration'}
 
@@ -193,11 +194,11 @@ class Registration(View):
 
 
 class RecoverPassword(View):
-    @view('user/recover_password.html')
+    @template('user/recover_password.html')
     async def get(self) -> dict:
         return {'location': 'recover_password'}
 
-    @view('user/recover_password.html')
+    @template('user/recover_password.html')
     async def post(self) -> dict:
 
         return {'location': 'recover_password'}
@@ -219,9 +220,68 @@ class Logout(View):
         return HTTPFound('/login')
 
 
+class UpdateAvatar(View):
+    @pass_user
+    async def get(self, user: dict):
+        return HTTPFound('/settings/edit-profile')
+
+    @view('user.edit_profile')
+    async def post(self, user: dict):
+        reader = await self.request.multipart()
+
+        avatar = await reader.next()
+
+        if avatar is None:
+            return {'errors': ['Data enviada no es correcta...']}
+
+        if avatar.headers['Content-Type'] not in ('image/png', 'image/jpeg'):
+            return {'errors': ['Solo se soporta los formatos jpeg y png']}
+
+        size = 0
+        size_error = False
+        _avatar = None
+
+        while True:
+            chunk = await avatar.read_chunk()
+
+            if not chunk:
+                break
+
+            if _avatar is None:
+                _avatar = chunk
+            else:
+                _avatar = _avatar + chunk
+
+            size += len(chunk)
+
+            if size >= 2 * 1024 * 1024:  # 5 MiB
+                del _avatar
+                size_error = True
+                break
+
+        if size_error:
+            return {'errors': ['El avatar no puede pesar más de 2MBs']}
+
+        await self.update(user['id'], bytearray(b64encode(_avatar)))
+
+        return {'success': 'Se ha actualizado tu avatar'}
+
+    async def update(self, id_: int, chunk: bytearray):
+        query = '''
+            UPDATE usuario
+            SET avatar = $2
+            WHERE id = $1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute(query, id_, chunk)
+
+
 routes = {
     'login': Login,
     'logout': Logout,
     'register': Registration,
-    'recover-password': RecoverPassword
+    'recover-password': RecoverPassword,
+    'settings': {
+        'update-avatar': UpdateAvatar
+    }
 }
