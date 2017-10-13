@@ -328,7 +328,7 @@ class AssignGrade(View):
 
         now = datetime.utcnow()
 
-        if school_term['fecha_comienzo'] <= now:
+        if school_term['fecha_comienzo'] > now:
             return json_response({'error': 'Todavía no puedes asignar notas para este ciclo académico'}, status=400)
         elif school_term['fecha_fin'] <= now:
             return json_response({'error': 'Este ciclo académico ya ha culminado'}, status=400)

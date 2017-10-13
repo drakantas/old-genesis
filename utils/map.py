@@ -64,6 +64,6 @@ def map_users(users: Union[Generator, List]) -> list:
         if 'tipo_documento' in user:
             user['tipo_documento'] = parse_data_key(user['tipo_documento'], 'id_types')
         if 'sexo' in user:
-            user['sexo'] = parse_data_key(user['sexo'], 'sexes')
+            user['sexo'] = parse_data_key(user['sexo'] or 0, 'sexes')
         return user
     return list(map(_convert_data_keys, [dict(user) for user in users]))

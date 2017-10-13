@@ -71,10 +71,9 @@ class StudentsList(View):
         query = '''
             SELECT estructura_notas.nota_id as id, nota.descripcion
             FROM estructura_notas
-            INNER JOIN ciclo_academico
-                    ON $1 = estructura_notas.ciclo_acad_id
             LEFT JOIN nota
                    ON nota.id = estructura_notas.nota_id
+            WHERE estructura_notas.ciclo_acad_id = $1
             ORDER BY estructura_notas.nota_id ASC
         '''
         async with self.request.app.db.acquire() as connection:
