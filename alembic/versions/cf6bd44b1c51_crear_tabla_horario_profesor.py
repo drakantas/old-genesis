@@ -19,7 +19,7 @@ depends_on = None
 def upgrade():
     op.create_table('horario_profesor',
                     sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-                    sa.Column('ciclo_id', sa.SmallInteger, nullable=False),
+                    sa.Column('ciclo_id', sa.Integer, nullable=False),
                     sa.Column('profesor_id', sa.BigInteger, nullable=False),
                     sa.Column('dia_clase', sa.SmallInteger, nullable=False),
                     sa.Column('hora_comienzo', sa.SmallInteger, default=0, nullable=False),

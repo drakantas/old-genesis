@@ -30,9 +30,9 @@ def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', stat
                 try:
                     user = await get_auth_data(request)
                 except NotAuthenticated:
-                    user = {}
+                    raise
 
-                _context['user'] = user
+                _context['user'] = flatten(user, {})
                 _context.update(await func(_self, user))
             else:
                 _context.update(await func(_self))
@@ -42,6 +42,17 @@ def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', stat
         return _view
 
     return wrapper
+
+
+def pass_user(func):
+    async def _view(_self: View):
+        try:
+            user = await get_auth_data(_self.request)
+        except NotAuthenticated:
+            raise
+
+        return await func(_self, user)
+    return _view
 
 
 def humanize_datetime(dt: datetime, with_time: bool = True, long: bool = True) -> str:

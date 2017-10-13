@@ -14,23 +14,13 @@
     <div class="content_wrapper padded">
         <div class="row students_list_header">
             <div class="col-sm-6">
-                <div class="dropdown">
-                    <button class="btn btn-default dropdown-toggle" type="button" id="shownResultsList" data-toggle="dropdown">
-                        Cantidad a mostrar
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="shownResultsList">
-                        <li><a href="/students/list/10">10</a></li>
-                        <li><a href="/students/list/25">25</a></li>
-                        <li><a href="/students/list/all">Todos</a></li>
-                    </ul>
-                </div>
+                <select class="selectpicker" id="schedule_0_day" name="schedule_0_day" data-live-search="true" data-width="auto">
+                    {% for school_term in school_terms %}
+                    <option value="{{ school_term.0 }}">{{ school_term.1 }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-sm-6 text-right">
-                <select class="selectpicker" id="schedule_0_day" name="schedule_0_day" data-live-search="true" data-width="auto">
-                    <option value="0">2017 Marzo-Junio</option>
-                    <option value="1">2017 Junio-Noviembre</option>
-                </select>
                 <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span> Exportar como .PDF</a>
             </div>
         </div>
@@ -50,12 +40,11 @@
                 {% for student in students %}
                     <tr>
                         <td width="10%"><abbr data-toggle="tooltip" title="{{ student.tipo_documento }}" class="student_id">{{ student.id }}</abbr></td>
-                        <td width="25%">{{ student.apellidos }} {{ student.nombres }}</td>
+                        <td width="25%"><a href="/profile/{{ student.id }}" data-toggle="tooltip" title="Ver perfíl">{{ student.apellidos }} {{ student.nombres }}</a></td>
                         <td width="10%">{{ student.escuela }}</td>
                         <td width="25%">{{ student.titulo_proyecto }}</td>
                         <td width="10%">{{ student.asistencia }}% <a class="attendance-btn" data-toggle="tooltip" data-placement="top" title="Ver reporte de asistencias"><span class="glyphicon glyphicon-question-sign"></span></a></td>
                         <td width="20%">
-                            <a href="/user/profile/{{ student.id }}" class="btn table-btn" data-toggle="tooltip" title="Ver perfil"><span class="glyphicon glyphicon-user"></span></a>
                             <button type="button" class="btn table-btn assign_grade" data-toggle="tooltip" title="Asignar nota"><span class="glyphicon glyphicon-pencil"></span></button>
                             <button type="button" class="btn table-btn student_grade_report" data-toggle="tooltip" title="Ver reporte de notas"><span class="glyphicon glyphicon-list-alt"></span></button>
                             <a href="/project/{{ student.id_proyecto }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>

@@ -31,7 +31,6 @@ def parse_data(data: list):
                'rol_id': 1,
                'fecha_creacion': now,
                'fecha_ultima_actualizacion': now,
-               'activo': True,
                'autorizado': True,
                'deshabilitado': False}
 
@@ -71,6 +70,7 @@ def main():
     pool = loop.run_until_complete(create_pool(dsn=db_dsn))
 
     school_term = loop.run_until_complete(do_transaction([{
+        'escuela': 1,
         'fecha_comienzo': '2017-10-01 00:00:00',
         'fecha_fin': '2017-10-31 23:59:00'
     }], 'ciclo_academico', 'id', pool))

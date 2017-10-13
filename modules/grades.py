@@ -1,12 +1,11 @@
 from typing import Union
 from decimal import Decimal
 from datetime import datetime
-from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, json_response, HTTPNotFound
 
 from utils.map import map_users
 from utils.validator import validator
-from utils.helpers import view, flatten
+from utils.helpers import view, flatten, pass_user
 
 
 class ClassGrades(View):
@@ -28,7 +27,7 @@ class ClassGrades(View):
         # Primero necesitamos obtener el ciclo académico, sea el actual o uno que se ingresó en la uri
         if 'school_term' in self.request.match_info:  # Si se encuentra el parametro en la uri
             school_term_id = int(self.request.match_info['school_term'])  # Castear el valor a entero
-            school_term = await self.school_term_exists(school_term_id, user['escuela'], self.request.app.db)
+            school_term = await self.school_term_exists(school_term_id, user['escuela'])
 
             del school_term_id
 
@@ -37,7 +36,7 @@ class ClassGrades(View):
 
         else:
             # Si no se pasó el parametro school_term en la uri, tratamos de obtener el ciclo académico actual
-            school_term = await self.fetch_school_term(user['escuela'], self.request.app.db)
+            school_term = await self.fetch_school_term(user['escuela'])
 
             if not school_term:
                 # En este caso, no hay un ciclo académico registrado, pero no podemos tirar 404
@@ -46,14 +45,14 @@ class ClassGrades(View):
                 return {'message': 'No se encontró un ciclo académico registrado para este preciso momento. '
                                    'Puedes seleccionar un ciclo académico previo en el selector superior.'}
 
-        students = await self.fetch_students(school_term['id'], self.request.app.db)
+        students = await self.fetch_students(school_term['id'])
 
         if not students:
             # No se encontraron estudiantes, por lo tanto informamos al usuario que no se encontraron estudiantes
             # registrados para este ciclo académico
             return {'message': 'No hay estudiantes registrados para este ciclo académico aún.'}
 
-        headers = await self.fetch_grade_headers(school_term['id'], self.request.app.db)
+        headers = await self.fetch_grade_headers(school_term['id'])
 
         if not headers:
             return {'message': 'No hay estructura de notas registrada, no hay notas por ver...'}
@@ -84,10 +83,10 @@ class ClassGrades(View):
         students = map_users(students)
 
         async def map_student(student: dict) -> dict:
-            grades = await self.fetch_grades(school_term['id'], student['id'], self.request.app.db)
+            grades = await self.fetch_grades(school_term['id'], student['id'])
             grades = flatten(grades, {})
             grades = list(map(lambda x: float(x['valor']) if x['valor'] is not None else '-', grades))
-            final_grade = await self.fetch_final_grade(school_term['id'], student['id'], self.request.app.db)
+            final_grade = await self.fetch_final_grade(school_term['id'], student['id'])
 
             if final_grade is None:
                 final_grade = '-'
@@ -102,8 +101,7 @@ class ClassGrades(View):
         return {'headers': headers,
                 'students': students}
 
-    @staticmethod
-    async def fetch_grade_headers(school_term: int, dbi: PoolConnectionHolder):
+    async def fetch_grade_headers(self, school_term: int):
         query = '''
             SELECT nota.descripcion, grupo_notas.descripcion as grupo
             FROM estructura_notas
@@ -114,11 +112,10 @@ class ClassGrades(View):
             WHERE ciclo_acad_id = $1
             ORDER BY nota.id ASC
         '''
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term)
 
-    @staticmethod
-    async def fetch_final_grade(school_term: int, student_id: int, dbi: PoolConnectionHolder):
+    async def fetch_final_grade(self, school_term: int, student_id: int):
         query = '''
             SELECT valor
             FROM promedio_notas_ciclo
@@ -126,11 +123,10 @@ class ClassGrades(View):
                   estudiante_id = $2
             LIMIT 1
         '''
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchval(school_term, student_id)
 
-    @staticmethod
-    async def fetch_grades(school_term: int, student_id: int, dbi: PoolConnectionHolder):
+    async def fetch_grades(self, school_term: int, student_id: int):
         query = '''
             SELECT nota_estudiante.valor
             FROM estructura_notas
@@ -142,11 +138,10 @@ class ClassGrades(View):
             WHERE ciclo_acad_id = $1
             ORDER BY nota.id ASC
         '''
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term, student_id)
 
-    @staticmethod
-    async def fetch_students(school_term: int, dbi: PoolConnectionHolder):
+    async def fetch_students(self, school_term: int):
         # Obtener los estudiantes de un ciclo académico
         query = '''
             SELECT usuario.id, usuario.tipo_documento, usuario.nombres, usuario.apellidos, usuario.escuela
@@ -155,42 +150,43 @@ class ClassGrades(View):
                     ON matricula.estudiante_id = usuario.id AND
                        matricula.ciclo_acad_id = $1
         '''
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term)  # fetch = list
 
-    @staticmethod
-    async def school_term_exists(school_term: int, user_school: int, dbi: PoolConnectionHolder):
+    async def school_term_exists(self, school_term: int, school: int):
         # Retornará verdadero si existe el ciclo académico
         query = '''
             SELECT true
             FROM ciclo_academico
-            WHERE id = $1
+            WHERE id = $1 AND
+                  escuela = $2
             LIMIT 1
         '''
-        async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchval(school_term)  # fetchval = valor
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school_term, school)  # fetchval = valor
 
-    @staticmethod
-    async def fetch_school_term(user_school: int, dbi: PoolConnectionHolder):
+    async def fetch_school_term(self, school: int):
         # Retornará el ciclo académico en este preciso momento
         query = '''
             SELECT id, fecha_comienzo, fecha_fin
             FROM ciclo_academico
             WHERE $1 >= fecha_comienzo AND
-                  $1 <= fecha_fin
+                  $1 <= fecha_fin AND
+                  escuela = $2
             LIMIT 1
         '''
-        async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchrow(datetime.utcnow())  # fetchrow = dict
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)  # fetchrow = dict
 
 
 class ReadGradeReport(View):
-    async def get(self):
+    @pass_user
+    async def get(self, user: dict):
         student_id = int(self.request.match_info['student_id'])
 
         if 'school_term' in self.request.match_info:
             school_term_id = int(self.request.match_info['school_term'])
-            school_term = await self.school_term_exists(school_term_id, self.request.app.db)
+            school_term = await self.school_term_exists(school_term_id, user['escuela'])
 
             if not school_term:
                 return json_response({'message': 'Ciclo académico no encontrado'}, status=404)
@@ -198,23 +194,23 @@ class ReadGradeReport(View):
                 # Se encontró el ciclo académico
                 school_term = {'id': school_term_id}
         else:
-            school_term = await self.fetch_school_term(self.request.app.db)
+            school_term = await self.fetch_school_term(user['escuela'])
 
             if not school_term:
                 return json_response({'message': 'No se encontró un ciclo académico para esta fecha'}, status=412)
 
-        student = await self.fetch_student(student_id, self.request.app.db)
+        student = await self.fetch_student(student_id)
 
         if not student:
             return json_response({'message': 'No se encontró al estudiante'}, status=404)
 
-        grades = await self.fetch_grades(school_term['id'], student['id'], self.request.app.db)
+        grades = await self.fetch_grades(school_term['id'], student['id'])
 
         if not grades:
             return json_response({'messages': 'No hay estructura de notas registrada, no hay notas por ver...'},
                                  status=412)
 
-        final_grade = await self.fetch_final_grade(school_term['id'], student['id'], self.request.app.db) or '-'
+        final_grade = await self.fetch_final_grade(school_term['id'], student['id']) or '-'
 
         result_data = flatten({
             'school_term': school_term,
@@ -227,9 +223,9 @@ class ReadGradeReport(View):
 
         grade_group = list()
 
-        def find_grade(grade: dict) -> Union[int, bool]:
+        def find_grade(_grade: dict) -> Union[int, bool]:
             for _i, _g in enumerate(grade_group):
-                if isinstance(_g, list) and _g[0]['grupo'] == grade['grupo']:
+                if isinstance(_g, list) and _g[0]['grupo'] == _grade['grupo']:
                     return _i
             return False
 
@@ -251,8 +247,7 @@ class ReadGradeReport(View):
 
         return json_response(result_data)
 
-    @staticmethod
-    async def fetch_final_grade(school_term: int, student_id: int, dbi: PoolConnectionHolder):
+    async def fetch_final_grade(self, school_term: int, student_id: int):
         query = '''
                 SELECT valor
                 FROM promedio_notas_ciclo
@@ -260,11 +255,10 @@ class ReadGradeReport(View):
                       estudiante_id = $2
                 LIMIT 1
             '''
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchval(school_term, student_id)
 
-    @staticmethod
-    async def fetch_grades(school_term: int, student_id: int, dbi: PoolConnectionHolder):
+    async def fetch_grades(self, school_term: int, student_id: int):
         query = '''
             SELECT estructura_notas.nota_id, grupo_notas.descripcion as grupo, nota.descripcion,
                    nota.porcentaje, nota_estudiante.valor
@@ -279,11 +273,10 @@ class ReadGradeReport(View):
             WHERE ciclo_acad_id = $1
             ORDER BY nota.id ASC
         '''
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term, student_id)
 
-    @staticmethod
-    async def fetch_student(student_id: int, dbi: PoolConnectionHolder):
+    async def fetch_student(self, student_id: int):
         query = '''
             SELECT id, nombres, apellidos
             FROM usuario
@@ -292,45 +285,53 @@ class ReadGradeReport(View):
                   autorizado = TRUE
             LIMIT 1
         '''
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchrow(student_id)
 
-    @staticmethod
-    async def school_term_exists(school_term: int, dbi: PoolConnectionHolder):
+    async def school_term_exists(self, school_term: int, school: int):
         query = '''
                 SELECT true
                 FROM ciclo_academico
-                WHERE id = $1
+                WHERE id = $1 AND
+                      escuela = $2
                 LIMIT 1
             '''
-        async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchval(school_term)
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school_term, school)
 
-    @staticmethod
-    async def fetch_school_term(dbi: PoolConnectionHolder):
+    async def fetch_school_term(self, school: int):
         query = '''
                 SELECT id, fecha_comienzo, fecha_fin
                 FROM ciclo_academico
                 WHERE $1 >= fecha_comienzo AND
-                      $1 <= fecha_fin
+                      $1 <= fecha_fin AND
+                      escuela = $2
                 LIMIT 1
             '''
-        async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchrow(datetime.utcnow())
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
 
 
 class AssignGrade(View):
-    async def post(self):
+    @pass_user
+    async def post(self, user: dict):
         data = await self.request.post()
 
         if 'student_id' not in data and 'grade_id' not in data and 'score' not in data:
             return json_response({'error': 'No se envio la data necesaria.'}, status=400)  # Request malformado...
 
         errors = await self.validate(data)
-        school_term = await self.fetch_school_term(self.request.app.db)
+        school_term = await self.fetch_school_term(user['escuela'])
 
         if not school_term:
             return json_response({'error': 'No se encontro un ciclo academico para esta fecha'}, status=400)
+
+        now = datetime.utcnow()
+
+        if school_term['fecha_comienzo'] <= now:
+            return json_response({'error': 'Todavía no puedes asignar notas para este ciclo académico'}, status=400)
+        elif school_term['fecha_fin'] <= now:
+            return json_response({'error': 'Este ciclo académico ya ha culminado'}, status=400)
 
         if errors:
             return json_response({'error': errors}, status=400)
@@ -391,16 +392,28 @@ class AssignGrade(View):
             return await (await connection.prepare(query)).fetchval(school_term, grade_id)
 
     async def _get_student(self, school_term: int, value: int) -> int:
+        query = '''
+            SELECT id
+            FROM usuario
+            RIGHT JOIN matricula
+                    ON matricula.estudiante_id = usuario.id
+            WHERE matricula.ciclo_acad_id = $1 AND
+                  usuario.id = $2
+        '''
         async with self.request.app.db.acquire() as connection:
-            query = '''
-                SELECT id
-                FROM usuario
-                RIGHT JOIN matricula
-                        ON matricula.estudiante_id = usuario.id
-                WHERE matricula.ciclo_acad_id = $1 AND
-                      usuario.id = $2
-            '''
             return await (await connection.prepare(query)).fetchval(school_term, value)
+
+    async def fetch_school_term(self, school: int):
+        query = '''
+                SELECT id, fecha_comienzo, fecha_fin
+                FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin AND
+                      escuela = $2
+                LIMIT 1
+            '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
 
     @staticmethod
     async def _validate_score(name: str, value: str, *args):
@@ -408,18 +421,6 @@ class AssignGrade(View):
 
         if not 0 <= _value <= 20:
             return '{} debe de estar en el rango de 0 a 20'.format(name)
-
-    @staticmethod
-    async def fetch_school_term(dbi: PoolConnectionHolder):
-        query = '''
-                SELECT id, fecha_comienzo, fecha_fin
-                FROM ciclo_academico
-                WHERE $1 >= fecha_comienzo AND
-                      $1 <= fecha_fin
-                LIMIT 1
-            '''
-        async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchrow(datetime.utcnow())
 
 
 routes = {

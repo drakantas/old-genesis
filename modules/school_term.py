@@ -46,17 +46,16 @@ class CreateSchoolTerm(View):
 
             _e = []
 
-            if await self.fetch_school_term(start_date, self.request.app.db):
+            if await self.fetch_school_term(start_date, user['escuela'], self.request.app.db):
                 _e.append('La fecha de comienzo ya se encuentra en el rango que abarca otro ciclo académico')
 
-            if await self.fetch_school_term(end_date, self.request.app.db):
+            if await self.fetch_school_term(end_date, user['escuela'], self.request.app.db):
                 _e.append('La fecha de culminación ya se encuentra en el rango que abarca otro ciclo académico')
 
             if _e:
                 result_data['errors'] = _e
             else:
                 validation_groups = await self._get_validation_groups(data)
-
                 if not validation_groups:
                     if 'errors' not in result_data:
                         result_data['errors'] = list()
@@ -70,7 +69,7 @@ class CreateSchoolTerm(View):
                     if _validation_errors:
                         result_data['errors'] = _validation_errors
                     else:
-                        await self.create(validation_groups, data, self.request.app.db)
+                        await self.create(validation_groups, data, user['escuela'], self.request.app.db)
                         result_data['success'] = 'Se ha creado el ciclo académico exitosamente'
 
             del _e
@@ -83,11 +82,11 @@ class CreateSchoolTerm(View):
             ['Fecha de culminación', data['ending_date'], 'len:10|custom', self._validate_date]
         ], self.request.app.db)
 
-    async def create(self, groups: list, data: dict, dbi: PoolConnectionHolder):
+    async def create(self, groups: list, data: dict, school: int, dbi: PoolConnectionHolder):
         query = '''
             WITH ciclo_acad AS (
-                INSERT INTO ciclo_academico (fecha_comienzo, fecha_fin)
-                VALUES ($1, $2)
+                INSERT INTO ciclo_academico (fecha_comienzo, fecha_fin, escuela)
+                VALUES ($1, $2, $3)
                 RETURNING id
             )
             
@@ -104,7 +103,10 @@ class CreateSchoolTerm(View):
 
         async with dbi.acquire() as connection:
             async with connection.transaction():
-                await connection.execute(query, datetime.strptime(data['beginning_date'], df), datetime.strptime(data['ending_date'], df))
+                await connection.execute(query,
+                                         datetime.strptime(data['beginning_date'], df),
+                                         datetime.strptime(data['ending_date'], df),
+                                         school)
 
     async def _build_group_query(self, group: list, data: dict) -> str:
         query = '''((SELECT id FROM ciclo_acad), {0}, {1}, {2}, {3}), '''.format(int(data[group[0]]),
@@ -244,16 +246,17 @@ class CreateSchoolTerm(View):
             return await (await connection.prepare(query)).fetch(role_id, school)
 
     @staticmethod
-    async def fetch_school_term(date: datetime, dbi: PoolConnectionHolder):
+    async def fetch_school_term(date: datetime, school: int, dbi: PoolConnectionHolder):
         query = '''
             SELECT id
             FROM ciclo_academico
             WHERE $1 >= fecha_comienzo AND
-                  $1 <= fecha_fin
+                  $1 <= fecha_fin AND
+                  escuela = $2
             LIMIT 1
         '''
         async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchval(date)
+            return await (await connection.prepare(query)).fetchval(date, school)
 
 
 class ViewSchoolTerm(View):

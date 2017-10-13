@@ -97,13 +97,17 @@ class Validator:
                 return 'El valor ingresado en {} no es lo mismo que el ingresado en el ' \
                        'campo {}'.format(name, elems[pos - 1][0])
         elif rule in ('custom', 'CUSTOM'):
-            val_func = elems[pos][-1]
+            _args = elems[pos][3:]
+
+            val_func = _args[0]
+
+            _args = _args[1:]
 
             if not (callable(val_func) and iscoroutinefunction(val_func)):
                 raise ValueError('Función de validación debe de ser una coroutine')
 
             try:
-                val = await val_func(name, value, pos, elems, dbi)
+                val = await val_func(name, value, pos, elems, dbi, *_args)
 
                 if isinstance(val, str):
                     return val
@@ -141,8 +145,11 @@ class Validator:
     def _len(value: str, range_: Union[Tuple, List, int]) -> bool:
         val_len = len(value)
 
-        if isinstance(range_, int) and val_len >= range_:
-            return True
+        if isinstance(range_, int):
+            if val_len >= range_:
+                return True
+            else:
+                return False
 
         if range_[0] <= val_len <= range_[1]:
             return True

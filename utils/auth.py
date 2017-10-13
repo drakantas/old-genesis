@@ -14,16 +14,18 @@ async def get_auth_data(request: Request) -> dict:
 
     async with request.app.db.acquire() as connection:
         query = '''
-            SELECT id, rol_id, correo_electronico,
+            SELECT usuario.id, rol_usuario.desc as rol, correo_electronico,
                    nombres, apellidos, sexo,
                    tipo_documento, nacionalidad, escuela,
                    nro_telefono, distrito, direccion,
-                   deshabilitado
+                   deshabilitado, avatar
             FROM usuario
-            WHERE id = $1 AND
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE usuario.id = $1 AND
                   deshabilitado != true
         '''
         stmt = await connection.prepare(query)
         user = await stmt.fetchrow(int(session['id']))
 
-        return {key: value for key, value in user.items()}
+        return user

@@ -1,59 +1,118 @@
 from datetime import datetime
-from aiohttp.web import View, json_response
+from typing import Generator
 from asyncpg.pool import PoolConnectionHolder
+from aiohttp.web import View, json_response, HTTPNotFound
 
-from utils.map import map_users
+from utils.map import map_users, parse_data_key
 from utils.helpers import view, flatten
+
+
+same_year_st = '{year} {month1}-{month2}'
+diff_year_str = '{year1} {month1} - {year2} {month2}'
 
 
 class StudentsList(View):
     @view('attendance.list')
     async def get(self, user: dict):
-        display_amount = 10
+        if 'school_term' in self.request.match_info:
+            school_term_id = await self.get_school_term(user['escuela'], int(self.request.match_info['school_term']))
+        else:
+            school_term_id = await self.get_school_term(user['escuela'])
 
-        if 'display_amount' in self.request.match_info:
-            display_amount = self.request.match_info['display_amount']
-            if display_amount == 'all':
-                display_amount = 1000
-            else:
-                display_amount = int(display_amount)
+        if school_term_id is None:
+            return {'school_term_has_not_begun': 'El ciclo académico no ha comenzado, tus acciones son limitadas'}
 
-        students = await self.get_students(user['escuela'], display_amount, self.request.app.db)
+        # Estudiantes de escuela y tal
+        students = await self.get_students(school_term_id, user['escuela'])
         students = map_users(students)
-        dd_grades = await self.get_grades(self.request.app.db)
+
+        # Notas disponibles para este ciclo
+        dd_grades = await self.get_grades(school_term_id)
+
+        # Ciclos académicos
+        school_terms = await self.get_school_terms(user)
 
         return {'students': students,
-                'dd_grades': dd_grades}
+                'dd_grades': dd_grades,
+                'school_terms': school_terms}
+
+    async def get_school_terms(self, user: dict):
+
+        def _g(stl: list) -> Generator:
+            for st in stl:
+                yield st['id'], self.school_term_to_str(st)
+
+        return list(_g(await self._get_school_terms(user['escuela'])))
+
+    async def _get_school_terms(self, school: int):
+        query = '''
+            SELECT id, fecha_comienzo, fecha_fin
+            FROM ciclo_academico
+            WHERE ciclo_academico.escuela = $1
+            ORDER BY id DESC
+            LIMIT 10
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school)
 
     @staticmethod
-    async def get_grades(dbi: PoolConnectionHolder):
+    def school_term_to_str(school_term: dict) -> str:
+        if school_term['fecha_comienzo'].year == school_term['fecha_fin'].year:
+            return same_year_st.format(year=school_term['fecha_comienzo'].year,
+                                       month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
+                                       month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
+
+        return diff_year_str.format(year1=school_term['fecha_comienzo'].year,
+                                    month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
+                                    year2=school_term['fecha_fin'].year,
+                                    month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
+
+    async def get_grades(self, school_term: int):
         query = '''
-            WITH ciclo_academico AS (
-                SELECT id
-                FROM ciclo_academico
-                WHERE $1 >= fecha_comienzo AND
-                      $1 <= fecha_fin
-                LIMIT 1
-            )
             SELECT estructura_notas.nota_id as id, nota.descripcion
             FROM estructura_notas
             INNER JOIN ciclo_academico
-                    ON ciclo_academico.id = estructura_notas.ciclo_acad_id
+                    ON $1 = estructura_notas.ciclo_acad_id
             LEFT JOIN nota
                    ON nota.id = estructura_notas.nota_id
             ORDER BY estructura_notas.nota_id ASC
         '''
-        async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetch(datetime.utcnow())
-    @staticmethod
-    async def get_students(school: int, amount: int, dbi: PoolConnectionHolder, student_role_id: int = 1,
-                           danger: int = 63):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school_term)
+
+    async def get_school_term(self, school: int, school_term: int = None):
+        if school_term is None:
+            query = '''
+                SELECT id
+                FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin AND
+                      escuela = $2
+                LIMIT 1
+            '''
+        else:
+            query = '''
+                SELECT id
+                FROM ciclo_academico
+                WHERE id = $1 AND
+                      escuela = $2
+                LIMIT 1
+            '''
+
+        async with self.request.app.db.acquire() as connection:
+            statement = await connection.prepare(query)
+            if school_term is None:
+                return await statement.fetchval(datetime.utcnow(), school)
+            else:
+                return await statement.fetchval(school_term, school)
+
+    async def get_students(self, school_term: int, school: int, student_role_id: int = 1, danger: int = 63,
+                           amount: int = 1000):
         query = '''
             WITH ciclo_academico AS (
                 SELECT fecha_comienzo, fecha_fin
                 FROM ciclo_academico
-                WHERE $1 >= fecha_comienzo AND
-                      $1 <= fecha_fin
+                WHERE id = $1
                 LIMIT 1
             ),
             alumno AS (
@@ -95,9 +154,9 @@ class StudentsList(View):
             ORDER BY apellidos ASC
         '''
 
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             stmt = await connection.prepare(query)
-            return await stmt.fetch(datetime.utcnow(), student_role_id, school, amount, danger)
+            return await stmt.fetch(school_term, student_role_id, school, amount, danger)
 
 
 class ReadAttendanceReport(View):
@@ -329,7 +388,7 @@ class RegisterAttendance(View):
 routes = {
     "students": {
         "list": StudentsList,
-        "list/{display_amount:(?:10|25|all)}": StudentsList
+        "school-term-{school_term:[1-9][0-9]*}/list": StudentsList
     },
     "attendance": {
         "register": RegisterAttendance,

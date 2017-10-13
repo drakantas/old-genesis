@@ -18,7 +18,8 @@ depends_on = None
 
 def upgrade():
     op.create_table('ciclo_academico',
-                    sa.Column('id', sa.SmallInteger, primary_key=True),
+                    sa.Column('id', sa.Integer, primary_key=True),
+                    sa.Column('escuela', sa.SmallInteger, nullable=False),
                     sa.Column('fecha_comienzo', sa.DateTime, nullable=False),
                     sa.Column('fecha_fin', sa.DateTime, nullable=False))
 

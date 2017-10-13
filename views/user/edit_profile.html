@@ -11,12 +11,87 @@
         	{% endfor %}
         </ul></div>
         {% endif %}
-        <form method="post">
-        	<div class="form-group">
-        		<label for="name">Nombres</label>
-        		<input id="name" name="name" class="form-control" placeholder="Nombres completos" value="{{ user.nombres }}" />
-        	</div>
-        	<button type="submit" class="btn btn-primary">Guardar</button>
-        </form>
+        {% if success is defined %}
+        <div class="alert alert-success">
+            {{ success }}
+        </div>
+        {% endif %}
+        <div class="row">
+            <form method="post" action="/settings/update-avatar">
+                <div class="col-md-6">
+                    <div class="text-center">
+                        <img width="202" height="202" class="thumbnail" style="display:inline-block;" />
+                    </div>
+                    <div class="row">
+                        <div class="col-md-9">
+                            <div class="form-group">
+                                <label for="avatar">Nuevo avatar</label>
+                                <input type="file" id="avatar" class="form-control" />
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group" style="height:59px;padding-top:25px;">
+                                <button type="submit" class="btn btn-primary" style="display:block;width:100%;">Subir</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <form method="post">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="nationality">Nacionalidad</label>
+                        <select id="nationality" name="nationality" class="selectpicker form-control" data-live-search="true">
+                            <option value="PE">Perú</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">Sexo</label>
+                        <select class="selectpicker form-control" id="gender" name="gender">
+                            <option value="0">Masculino</option>
+                            <option value="1">Femenino</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Celular</label>
+                        <input id="phone" name="phone" class="form-control" placeholder="Celular" value="{{ user.nro_telefono or '' }}" />
+                    </div>
+                    <div class="form-group">
+                        <label for="district">Distrito</label>
+                        <select id="district" name="district" class="selectpicker form-control" data-live-search="true">
+                            <option value="0">Chosica</option>
+                            <option value="1">Lima</option>
+                            <option value="2">La Molina</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="name">Nombres</label>
+                        <input id="name" name="name" class="form-control" placeholder="Nombres" value="{{ user.nombres }}" />
+                    </div>
+                    <div class="form-group">
+                        <label for="last_name">Apellidos</label>
+                        <input id="last_name" name="last_name" class="form-control" placeholder="Apellidos" value="{{ user.apellidos }}" />
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="address">Dirección</label>
+                        <input id="address" name="address" class="form-control" placeholder="Dirección" value="{{ user.direccion or '' }}" />
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Correo electrónico</label>
+                        <input type="text" id="email" name="email" class="form-control" placeholder="Email" value="{{ user.correo_electronico }}" />
+                    </div>
+                </div>
+
+                <div class="col-md-12 text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">Guardar</button>
+                </div>
+            </form>
+        </div>
     </div>
 {% endblock %}
