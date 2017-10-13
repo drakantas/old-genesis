@@ -2,18 +2,38 @@
 
 {% block content %}
     <div class="content_wrapper padded">
-        <div class="row management-page-search">
-            <div class="col-sm-9">
-                <input class="form-control" id="searchStudent" placeholder="Buscar alumno">
+        <h2 style="margin-top:0;">{{ requested_user.nombres }} {{ requested_user.apellidos }}</h2>
+        <hr class="divider" />
+        <div class="row">
+            <div class="col-sm-6">
+                    <h4>Nro de documento: </h4>
+                    <span>{{ requested_user.id }} </span><br /><br />
+                    <h4>Fecha de nacimiento: </h4>
+                    <span>20/07/1993</span><br /><br />
+                    <h4>Facultad: </h4>
+                    <span>Ingenieria de Sistemas</span><br /><br />
+                    <h4>Correo electronico: </h4>
+                    <span>{{ requested_user.correo_electronico }} </span><br /><br />
+                    <h4>Direccion: </h4>
+                    <span>
+                        {% if not (requested_user.direccion or requested_user.distrito) %}
+                            No registrado
+                        {%else %}
+                            {{ requested_user.direccion }}, {{ requested_user.distrito }}
+                        {% endif %}
+                    </span><br /><br />
+                    <h4>Nro celular: </h4>
+                    <span>{{ requested_user.nro_telefono or 'No registrado' }}</span>
             </div>
-            <div class="col-sm-3">
-                <input type="button" class="btn btn-primary" value="Buscar">
+            <div class="col-sm-6">
+                <div class="text-left">
+                    <img src="" class="thumbnail" width="214" height="214" style="display:inline-block;margin:0;"><br /><br />
+                </div>
+                <h4>Nacionalidad: </h4>
+                <span>Peruano</span><br /><br />
+                <h4>Sexo: </h4>
+                <span>Masculino </span><br /><br />
             </div>
         </div>
-    </div>
-    <div class="content_wrapper padded">
-        <h2 style="margin-top:0;">{{ requested_user.nombres }} {{ requested_user.apellidos }}</h2>
-        <hr class="divider">
-        ...
     </div>
 {% endblock %}

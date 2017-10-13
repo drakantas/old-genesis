@@ -1,10 +1,11 @@
 from typing import Union
 from datetime import datetime
-from bcrypt import hashpw, checkpw, gensalt
-from aiohttp.web import View, web_request
 from aiohttp_session import get_session
+from bcrypt import hashpw, checkpw, gensalt
 from aiohttp_jinja2 import template as view
+from aiohttp.web import View, web_request, HTTPFound
 
+from utils.helpers import pass_user
 from utils.validator import validator
 
 
@@ -202,8 +203,25 @@ class RecoverPassword(View):
         return {'location': 'recover_password'}
 
 
+class Logout(View):
+    async def get(self):
+        return await self.logout()
+
+    async def post(self):
+        return await self.logout()
+
+    async def logout(self):
+        session = await get_session(self.request)
+
+        if 'id' in session:
+            del session['id']
+
+        return HTTPFound('/login')
+
+
 routes = {
-    "login": Login,
-    "register": Registration,
-    "recover-password": RecoverPassword
+    'login': Login,
+    'logout': Logout,
+    'register': Registration,
+    'recover-password': RecoverPassword
 }
