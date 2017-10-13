@@ -6,6 +6,7 @@ from bcrypt import hashpw, checkpw, gensalt
 from aiohttp_jinja2 import template
 from aiohttp.web import View, web_request, HTTPFound
 
+from utils.map import map_users
 from utils.helpers import pass_user, view
 from utils.validator import validator
 
@@ -276,6 +277,35 @@ class UpdateAvatar(View):
             return await connection.execute(query, id_, chunk)
 
 
+class UsersList(View):
+    @view('user.list')
+    async def get(self, user: dict):
+        if 'page' in self.request.match_info:
+            page = int(self.request.match_info['page'])
+        else:
+            page = 1
+
+        offset = (page - 1) * 20
+        users = await self.fetch_users(user['escuela'], offset)
+        users = map_users(users)
+
+        return {'users': users}
+
+    async def fetch_users(self, school: int, offset: int):
+        query = '''
+            SELECT usuario.id, tipo_documento, nombres, apellidos, rol_usuario.desc as rol, sexo, deshabilitado, autorizado, escuela
+            FROM usuario
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE usuario.escuela = $1
+            ORDER BY rol_usuario.desc ASC
+            LIMIT 20 OFFSET $2
+        '''
+
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school, offset)
+
+
 routes = {
     'login': Login,
     'logout': Logout,
@@ -283,5 +313,7 @@ routes = {
     'recover-password': RecoverPassword,
     'settings': {
         'update-avatar': UpdateAvatar
-    }
+    },
+    'users/list':  UsersList,
+    'users/list/page-{page:[1-9][0-9]*}': UsersList
 }
