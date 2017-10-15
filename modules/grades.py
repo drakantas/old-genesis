@@ -423,6 +423,110 @@ class AssignGrade(View):
             return '{} debe de estar en el rango de 0 a 20'.format(name)
 
 
+class UpdateGrade(View):
+    async def post(self):
+        if not ('grade_id' in self.request.match_info and 'student_id' in self.request.match_info):
+            raise HTTPNotFound
+
+        grade_id = int(self.request.match_info['grade_id'])
+        student_id = int(self.request.match_info['student_id'])
+
+        grade = await self.fetch_grade(grade_id, student_id)
+
+        if not grade:
+            return json_response({'message': 'No se encontró la nota ingresada'}, status=400)
+
+        now = datetime.utcnow()
+
+        if not grade['fecha_comienzo'] <= now <= grade['fecha_fin']:
+            return json_response({'message': 'No se puede actualizar las notas de un ciclo académico ya culminado o'
+                                             'que recién va a comenzar'}, status=400)
+
+        final_grade_exists = await self.fetch_final_grade(student_id, grade['ciclo_acad_id']) or False
+
+        if final_grade_exists:
+            return json_response({'message': 'No puedes actualizar esta nota porque ya se generó el promedio'
+                                             'final del curso'}, status=400)
+
+        data = await self.request.post()  # Coger data
+
+        if 'score' not in data:
+            return json_response({'message': 'No se envió la data apropiada'}, status=400)
+
+        errors = await self.validate(data)
+
+        if errors:
+            return json_response({'message': errors}, status=400)
+
+        await self.update(grade_id, student_id, Decimal(data['score']))
+
+        return json_response({'message': 'Se actualizó la nota exitosamente'})
+
+    async def validate(self, data: dict) -> Union[list, None]:
+        return await validator.validate([
+                ['Puntaje', data['score'], 'len:1,4|numeric|custom', self._validate_score]
+        ], self.request.app.db)
+
+    async def update(self, grade: int, student: int, score: Decimal):
+        query = '''
+            UPDATE nota_estudiante
+            SET valor = $3
+            WHERE nota_id = $1 AND
+                  estudiante_id = $2
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute(query, grade, student, score)
+
+    async def fetch_final_grade(self, student: int, school_term: int):
+        query = '''
+            SELECT true
+            FROM promedio_notas_ciclo
+            WHERE promedio_notas_ciclo.ciclo_acad_id = $1 AND
+                  promedio_notas_ciclo.estudiante_id = $2
+            LIMIT 1;
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(school_term, student)
+
+    async def fetch_grade(self, grade: int, student: int):
+        query = '''
+            SELECT nota_estudiante.nota_id, nota_estudiante.valor,
+                   nota.descripcion, ciclo_academico.id as ciclo_acad_id,
+                   ciclo_academico.fecha_comienzo, ciclo_academico.fecha_fin
+            FROM nota_estudiante
+            LEFT JOIN estructura_notas
+                   ON estructura_notas.nota_id = nota_estudiante.nota_id
+            LEFT JOIN nota
+                   ON nota.id = nota_estudiante.nota_id
+            LEFT JOIN ciclo_academico
+                   ON ciclo_academico.id = estructura_notas.ciclo_acad_id
+            WHERE nota_estudiante.nota_id = $1 AND
+                  nota_estudiante.estudiante_id = $2
+            LIMIT 1;
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(grade, student)
+
+    async def fetch_current_school_term(self, school: int):
+        query = '''
+            SELECT id, fecha_comienzo, fecha_fin
+            FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin AND
+                      escuela = $2
+                LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
+
+    @staticmethod
+    async def _validate_score(name: str, value: str, *args):
+        _value = float(value)
+
+        if not 0 <= _value <= 20:
+            return '{} debe de estar en el rango de 0 a 20'.format(name)
+
+
 routes = {
     'grades': {
         'class-report': ClassGrades,
@@ -431,6 +535,7 @@ routes = {
             '{student_id:[1-9][0-9]*}': ReadGradeReport,
             'school-term-{school_term:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadGradeReport
         },
-        'assign': AssignGrade
+        'assign': AssignGrade,
+        'update/{grade_id:[1-9][0-9]*}/student-{student_id:[1-9][0-9]*}': UpdateGrade
     }
 }
