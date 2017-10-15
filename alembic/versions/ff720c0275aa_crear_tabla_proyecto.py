@@ -19,7 +19,8 @@ depends_on = None
 def upgrade():
     op.create_table('proyecto',
                     sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
-                    sa.Column('titulo', sa.String(128), nullable=False, unique=True, index=True))
+                    sa.Column('titulo', sa.String(128), nullable=False, unique=True, index=True),
+                    sa.Column('ciclo_acad_id', sa.Integer, nullable=False))
 
 
 def downgrade():

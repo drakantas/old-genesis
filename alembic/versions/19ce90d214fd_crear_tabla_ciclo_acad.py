@@ -23,6 +23,15 @@ def upgrade():
                     sa.Column('fecha_comienzo', sa.DateTime, nullable=False),
                     sa.Column('fecha_fin', sa.DateTime, nullable=False))
 
+    # FK para la tabla proyecto
+    op.create_foreign_key('ciclo_acad_id_fk',
+                          'proyecto', 'ciclo_academico',
+                          ['ciclo_acad_id'], ['id'],
+                          ondelete='CASCADE', onupdate='CASCADE')
+
 
 def downgrade():
+    # Dropear la FK de proyecto
+    op.drop_constraint('ciclo_acad_id_fk', 'proyecto', type_='foreignkey')
+
     op.drop_table('ciclo_academico')
