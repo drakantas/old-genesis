@@ -573,6 +573,16 @@ class UpdateGrade(View):
             return '{} debe de estar en el rango de 0 a 20'.format(name)
 
 
+class CreateGradingStructure(View):
+    @view('grades.create_structure')
+    async def get(self, user: dict):
+        return {}
+
+    @view('grades.create_structure')
+    async def post(self, user: dict):
+        return {}
+
+
 routes = {
     'grades': {
         'class-report': ClassGrades,

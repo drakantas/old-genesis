@@ -20,7 +20,8 @@ def upgrade():
     op.create_table('integrante_proyecto',
                     sa.Column('usuario_id', sa.BigInteger, primary_key=True),
                     sa.Column('proyecto_id', sa.Integer, primary_key=True),
-                    sa.Column('fecha_integrar', sa.DateTime(timezone=True), nullable=False))
+                    sa.Column('fecha_integrar', sa.DateTime, nullable=False),
+                    sa.Column('aceptado', sa.Boolean, nullable=False, server_default=sa.false()))
 
     op.create_foreign_key('usuario_id_fk',
                           'integrante_proyecto', 'usuario',

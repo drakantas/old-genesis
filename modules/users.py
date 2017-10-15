@@ -306,6 +306,27 @@ class UsersList(View):
             return await (await connection.prepare(query)).fetch(school, offset)
 
 
+class ChangePassword(View):
+    @view('user.change_password')
+    async def get(self, user: dict):
+        return {}
+
+    @view('user.change_password')
+    async def post(self, user: dict):
+        data = await self.request.post()
+
+        if not('current_password' in data and 'new_password' in data and 'repeat_new_password' in data):
+            return {'errors': ['Data enviada no es correcta...']}
+
+        return {}
+
+    async def validate(self, data: dict):
+        return await validator.validate([
+            ['Contraseña actual', data['current_password'], ''],
+            []
+        ], self.request.app.db)
+
+
 routes = {
     'login': Login,
     'logout': Logout,
