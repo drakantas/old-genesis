@@ -4,7 +4,7 @@ from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, json_response, HTTPNotFound
 
 from utils.map import map_users, parse_data_key
-from utils.helpers import view, flatten
+from utils.helpers import view, flatten, pass_user
 
 
 same_year_st = '{year} {month1}-{month2}'
@@ -32,9 +32,12 @@ class StudentsList(View):
         # Ciclos académicos
         school_terms = await self.get_school_terms(user)
 
+        current_school_term_id = school_term_id
+
         return {'students': students,
                 'dd_grades': dd_grades,
-                'school_terms': school_terms}
+                'school_terms': school_terms,
+                'current_school_term_id': current_school_term_id}
 
     async def get_school_terms(self, user: dict):
 
@@ -137,6 +140,9 @@ class StudentsList(View):
                         ON integrante_proyecto.usuario_id = usuario.id
                 LEFT JOIN proyecto
                         ON proyecto.id = integrante_proyecto.proyecto_id
+                INNER JOIN matricula
+                        ON matricula.estudiante_id = usuario.id AND
+                           matricula.ciclo_acad_id = $1
                 WHERE rol_id = $2 AND
                       escuela = $3 AND
                       nombres != '' AND
@@ -159,27 +165,32 @@ class StudentsList(View):
 
 
 class ReadAttendanceReport(View):
-    async def get(self):
+    @pass_user
+    async def get(self, user: dict):
         student_id = int(self.request.match_info['student_id'])
 
         if 'school_term_id' in self.request.match_info:
             school_term_id = int(self.request.match_info['school_term_id'])
-            school_term = await self.school_term_exists(school_term_id, self.request.app.db)
+            school_term = await self.school_term_exists(school_term_id, user['escuela'], self.request.app.db)
 
             if school_term:
                 school_term = {'id': school_term_id}
                 del school_term_id
             else:
                 # No se encontró ciclo académico
-                return json_response({'message': 'Ciclo académico no encontrado'}, status=404)
+                return json_response({'message': 'Ciclo académico no encontrado'}, status=400)
         else:
-            school_term = await self.fetch_school_term(self.request.app.db)
+            school_term = await self.fetch_school_term(user['escuela'], self.request.app.db)
 
             if not school_term:
                 # No hay ciclo académico registrado para esta fecha
-                return json_response({'message': 'No se encontró un ciclo académico para esta fecha'}, status=412)
+                return json_response({'message': 'No se encontró un ciclo académico para esta fecha'}, status=400)
 
         schedules = await self.fetch_schedules(school_term['id'], self.request.app.db)
+
+        if not schedules:
+            return json_response({'message': 'No hay horarios disponibles'}, status=400)
+
         attendances = dict()
 
         for schedule in schedules:
@@ -254,27 +265,29 @@ class ReadAttendanceReport(View):
             return await (await connection.prepare(query)).fetch(school_term)
 
     @staticmethod
-    async def fetch_school_term(dbi: PoolConnectionHolder):
+    async def fetch_school_term(school: int, dbi: PoolConnectionHolder):
         query = '''
             SELECT id, fecha_comienzo, fecha_fin
             FROM ciclo_academico
             WHERE $1 >= fecha_comienzo AND
-                  $1 <= fecha_fin
+                  $1 <= fecha_fin AND
+                  escuela = $2
             LIMIT 1
         '''
         async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchrow(datetime.utcnow())
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
 
     @staticmethod
-    async def school_term_exists(school_term: id, dbi: PoolConnectionHolder):
+    async def school_term_exists(school_term: int, school: int, dbi: PoolConnectionHolder):
         query = '''
             SELECT true
             FROM ciclo_academico
-            WHERE id = $1
+            WHERE id = $1 AND
+                  escuela = $2
             LIMIT 1
         '''
         async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchval(school_term)
+            return await (await connection.prepare(query)).fetchval(school_term, school)
 
 
 class RegisterAttendance(View):
@@ -385,13 +398,13 @@ class RegisterAttendance(View):
 
 
 routes = {
-    "students": {
-        "list": StudentsList,
-        "school-term-{school_term:[1-9][0-9]*}/list": StudentsList
+    'students': {
+        'list': StudentsList,
+        'list/school-term-{school_term:[1-9][0-9]*}': StudentsList
     },
-    "attendance": {
-        "register": RegisterAttendance,
-        "student-report/{student_id:[1-9][0-9]*}": ReadAttendanceReport,
-        "student-report/school-term-{school_term_id:[1-9][0-9]*}/{student_id:[1-9][0-9]*}": ReadAttendanceReport
+    'attendance': {
+        'register': RegisterAttendance,
+        'student-report/{student_id:[1-9][0-9]*}': ReadAttendanceReport,
+        'student-report/school-term-{school_term_id:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadAttendanceReport
     }
 }

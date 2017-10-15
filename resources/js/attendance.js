@@ -46,7 +46,18 @@ class Attendance
                 $('#student_attendance_report .modal-body').html($this.buildReport(response.data.overall, response.data.schedules, response.data.attendances));
             })
             .catch(function (error) {
-                console.log(error);
+                const response = error.response;
+
+                if (response.status !== 400) {
+                    console.log(error);
+                    return;
+                }
+
+                $('#student_attendance_report .modal-body').html(`
+                    <div class="alert alert-danger">
+                        ${response.data.message}
+                    </div>
+                `);
             });
     }
 

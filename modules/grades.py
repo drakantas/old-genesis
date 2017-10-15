@@ -1,11 +1,12 @@
-from typing import Union
 from decimal import Decimal
 from datetime import datetime
+from typing import Union, Generator
 from aiohttp.web import View, json_response, HTTPNotFound
 
-from utils.map import map_users
 from utils.validator import validator
+from utils.map import map_users, parse_data_key
 from utils.helpers import view, flatten, pass_user
+from modules.attendance import same_year_st, diff_year_str
 
 
 class ClassGrades(View):
@@ -29,10 +30,14 @@ class ClassGrades(View):
             school_term_id = int(self.request.match_info['school_term'])  # Castear el valor a entero
             school_term = await self.school_term_exists(school_term_id, user['escuela'])
 
-            del school_term_id
-
             if not school_term:  # Si el ciclo académico no se encontró
                 raise HTTPNotFound  # Se levanta 404
+            else:
+                school_term = {
+                    'id': school_term_id
+                }
+
+                del school_term_id
 
         else:
             # Si no se pasó el parametro school_term en la uri, tratamos de obtener el ciclo académico actual
@@ -43,19 +48,25 @@ class ClassGrades(View):
                 # pues no se pasó un parámetro de ciclo académico que no existe, informamos al usuario que no hay un
                 # ciclo académico registrado, por lo tanto no hay data a mostrar.
                 return {'message': 'No se encontró un ciclo académico registrado para este preciso momento. '
-                                   'Puedes seleccionar un ciclo académico previo en el selector superior.'}
+                                   'Puedes seleccionar un ciclo académico previo en el selector superior.',
+                        'school_terms': await self.get_school_terms(user),
+                        'current_school_term_id': school_term['id']}
 
         students = await self.fetch_students(school_term['id'])
 
         if not students:
             # No se encontraron estudiantes, por lo tanto informamos al usuario que no se encontraron estudiantes
             # registrados para este ciclo académico
-            return {'message': 'No hay estudiantes registrados para este ciclo académico aún.'}
+            return {'message': 'No hay estudiantes registrados para este ciclo académico aún.',
+                    'school_terms': await self.get_school_terms(user),
+                    'current_school_term_id': school_term['id']}
 
         headers = await self.fetch_grade_headers(school_term['id'])
 
         if not headers:
-            return {'message': 'No hay estructura de notas registrada, no hay notas por ver...'}
+            return {'message': 'No hay estructura de notas registrada, no hay notas por ver...',
+                    'school_terms': await self.get_school_terms(user),
+                    'current_school_term_id': school_term['id']}
 
         header_group = list()
 
@@ -99,7 +110,9 @@ class ClassGrades(View):
             students[_student_i] = await map_student(_student)
 
         return {'headers': headers,
-                'students': students}
+                'students': students,
+                'school_terms': await self.get_school_terms(user),
+                'current_school_term_id': school_term['id']}
 
     async def fetch_grade_headers(self, school_term: int):
         query = '''
@@ -146,7 +159,7 @@ class ClassGrades(View):
         query = '''
             SELECT usuario.id, usuario.tipo_documento, usuario.nombres, usuario.apellidos, usuario.escuela
             FROM usuario
-            RIGHT JOIN matricula
+            INNER JOIN matricula
                     ON matricula.estudiante_id = usuario.id AND
                        matricula.ciclo_acad_id = $1
         '''
@@ -178,6 +191,37 @@ class ClassGrades(View):
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)  # fetchrow = dict
 
+    async def get_school_terms(self, user: dict):
+
+        def _g(stl: list) -> Generator:
+            for st in stl:
+                yield st['id'], self.school_term_to_str(st)
+
+        return list(_g(await self._get_school_terms(user['escuela'])))
+
+    async def _get_school_terms(self, school: int):
+        query = '''
+            SELECT id, fecha_comienzo, fecha_fin
+            FROM ciclo_academico
+            WHERE ciclo_academico.escuela = $1
+            ORDER BY id DESC
+            LIMIT 10
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school)
+
+    @staticmethod
+    def school_term_to_str(school_term: dict) -> str:
+        if school_term['fecha_comienzo'].year == school_term['fecha_fin'].year:
+            return same_year_st.format(year=school_term['fecha_comienzo'].year,
+                                       month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
+                                       month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
+
+        return diff_year_str.format(year1=school_term['fecha_comienzo'].year,
+                                    month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
+                                    year2=school_term['fecha_fin'].year,
+                                    month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
+
 
 class ReadGradeReport(View):
     @pass_user
@@ -189,7 +233,7 @@ class ReadGradeReport(View):
             school_term = await self.school_term_exists(school_term_id, user['escuela'])
 
             if not school_term:
-                return json_response({'message': 'Ciclo académico no encontrado'}, status=404)
+                return json_response({'message': 'Ciclo académico no encontrado'}, status=400)
             else:
                 # Se encontró el ciclo académico
                 school_term = {'id': school_term_id}
@@ -197,18 +241,18 @@ class ReadGradeReport(View):
             school_term = await self.fetch_school_term(user['escuela'])
 
             if not school_term:
-                return json_response({'message': 'No se encontró un ciclo académico para esta fecha'}, status=412)
+                return json_response({'message': 'No se encontró un ciclo académico para esta fecha'}, status=400)
 
         student = await self.fetch_student(student_id)
 
         if not student:
-            return json_response({'message': 'No se encontró al estudiante'}, status=404)
+            return json_response({'message': 'No se encontró al estudiante'}, status=400)
 
         grades = await self.fetch_grades(school_term['id'], student['id'])
 
         if not grades:
-            return json_response({'messages': 'No hay estructura de notas registrada, no hay notas por ver...'},
-                                 status=412)
+            return json_response({'message': 'No hay estructura de notas registrada, no hay notas por ver...'},
+                                 status=400)
 
         final_grade = await self.fetch_final_grade(school_term['id'], student['id']) or '-'
 
@@ -317,7 +361,7 @@ class AssignGrade(View):
     async def post(self, user: dict):
         data = await self.request.post()
 
-        if 'student_id' not in data and 'grade_id' not in data and 'score' not in data:
+        if 'student_id' not in data or 'grade_id' not in data or 'score' not in data:
             return json_response({'error': 'No se envio la data necesaria.'}, status=400)  # Request malformado...
 
         errors = await self.validate(data)
@@ -328,6 +372,8 @@ class AssignGrade(View):
 
         now = datetime.utcnow()
 
+        # Un poco over the top, considerando que la consulta no retornará ningún ciclo académico si el tiempo actual
+        # No se encuentra en un rango de algún ciclo académico de la escuela...
         if school_term['fecha_comienzo'] > now:
             return json_response({'error': 'Todavía no puedes asignar notas para este ciclo académico'}, status=400)
         elif school_term['fecha_fin'] <= now:
@@ -425,7 +471,7 @@ class AssignGrade(View):
 
 class UpdateGrade(View):
     async def post(self):
-        if not ('grade_id' in self.request.match_info and 'student_id' in self.request.match_info):
+        if 'grade_id' not in self.request.match_info or 'student_id' not in self.request.match_info:
             raise HTTPNotFound
 
         grade_id = int(self.request.match_info['grade_id'])

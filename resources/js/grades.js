@@ -121,7 +121,18 @@ class Grades
                 $($this.report + ' .modal-body').html($this.buildReport(response.data.grades, response.data.final_grade));
             })
             .catch(function (error) {
-                console.log(error);
+                const response = error.response;
+
+                if (response.status !== 400) {
+                    console.log(error);
+                    return;
+                }
+
+                $($this.report + ' .modal-body').html(`
+                    <div class="alert alert-danger">
+                        ${response.data.message}
+                    </div>
+                `);
             });
     }
 
