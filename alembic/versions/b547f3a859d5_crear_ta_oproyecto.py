@@ -21,9 +21,7 @@ def upgrade():
                     sa.Column('usuario_id', sa.BigInteger, primary_key=True),
                     sa.Column('proyecto_id', sa.Integer, primary_key=True),
                     sa.Column('contenido', sa.Text, nullable=False),
-
-                    # Usaría jsonb pero en el supuesto de que cambiemos a mysql, mysql no soporta ese type
-                    sa.Column('leido', sa.JSON, nullable=True))
+                    sa.Column('finalizado', sa.Boolean, nullable=False, server_default=sa.false()))
 
     op.create_foreign_key('usuario_id_fk',
                           'observacion_proyecto', 'usuario',

@@ -19,7 +19,19 @@ depends_on = None
 def upgrade():
     op.create_table('rol_usuario',
                     sa.Column('id', sa.Integer, primary_key=True),
-                    sa.Column('desc', sa.String(16), unique=True, nullable=False))
+                    sa.Column('desc', sa.String(32), unique=True, nullable=False),
+                    sa.Column('ver_listado_alumnos', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('ver_reportes_personales', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('ver_notas_de_clase', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('ver_listado_proyectos', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('asignar_notas', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('registrar_asistencia', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('crear_proyecto', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('gestionar_proyectos', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('revisar_proyectos', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('autorizar_estudiantes', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('mantener_usuarios', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('mantener_roles', sa.Boolean, nullable=False, server_default=sa.false()))
 
 
 def downgrade():

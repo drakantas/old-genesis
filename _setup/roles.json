@@ -1,18 +1,82 @@
 [
   {
     "id": 1,
-    "desc": "Estudiante"
+    "desc": "Estudiante",
+    "ver_listado_alumnos": false,
+    "ver_reportes_personales": true,
+    "ver_notas_de_clase": false,
+    "ver_listado_proyectos": false,
+    "asignar_notas": false,
+    "registrar_asistencia": false,
+    "crear_proyecto": true,
+    "gestionar_proyectos": false,
+    "revisar_proyectos": false,
+    "autorizar_estudiantes": false,
+    "mantener_usuarios": false,
+    "mantener_roles": false
   },
   {
     "id": 2,
-    "desc": "Profesor"
+    "desc": "Profesor",
+    "ver_listado_alumnos": true,
+    "ver_reportes_personales": false,
+    "ver_notas_de_clase": true,
+    "ver_listado_proyectos": true,
+    "asignar_notas": true,
+    "registrar_asistencia": true,
+    "crear_proyecto": false,
+    "gestionar_proyectos": false,
+    "revisar_proyectos": true,
+    "autorizar_estudiantes": false,
+    "mantener_usuarios": false,
+    "mantener_roles": false
   },
   {
     "id": 3,
-    "desc": "Secretario"
+    "desc": "Secretario",
+    "ver_listado_alumnos": true,
+    "ver_reportes_personales": false,
+    "ver_notas_de_clase": false,
+    "ver_listado_proyectos": true,
+    "asignar_notas": false,
+    "registrar_asistencia": false,
+    "crear_proyecto": false,
+    "gestionar_proyectos": true,
+    "revisar_proyectos": false,
+    "autorizar_estudiantes": true,
+    "mantener_usuarios": true,
+    "mantener_roles": false
   },
   {
     "id": 4,
-    "desc": "Director"
+    "desc": "Director de escuela",
+    "ver_listado_alumnos": true,
+    "ver_reportes_personales": false,
+    "ver_notas_de_clase": true,
+    "ver_listado_proyectos": true,
+    "asignar_notas": true,
+    "registrar_asistencia": false,
+    "crear_proyecto": false,
+    "gestionar_proyectos": true,
+    "revisar_proyectos": true,
+    "autorizar_estudiantes": true,
+    "mantener_usuarios": true,
+    "mantener_roles": true
+  },
+  {
+    "id": 5,
+    "desc": "Jurado",
+    "ver_listado_alumnos": false,
+    "ver_reportes_personales": false,
+    "ver_notas_de_clase": false,
+    "ver_listado_proyectos": false,
+    "asignar_notas": false,
+    "registrar_asistencia": false,
+    "crear_proyecto": false,
+    "gestionar_proyectos": false,
+    "revisar_proyectos": true,
+    "autorizar_estudiantes": false,
+    "mantener_usuarios": false,
+    "mantener_roles": false
   }
 ]
