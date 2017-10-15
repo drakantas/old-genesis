@@ -1,0 +1,30 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <h2 style="margin-top:0;">Usuarios</h2>
+        <hr class="divider" />
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tipo de documento</th>
+                    <th>Nombres y apellidos</th>
+                    <th>Rol</th>
+                    <th>Escuela</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for _user in users %}
+            <tr>
+                <td>{{ _user.id }}</td>
+                <td>{{ _user.tipo_documento }}</td>
+                <td>{{ _user.nombres }} {{ _user.apellidos }}</td>
+                <td>{{ _user.rol }}</td>
+                <td>{{ _user.escuela }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
