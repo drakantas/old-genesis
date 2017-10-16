@@ -134,11 +134,14 @@ class StudentsList(View):
                     (
                         SELECT COUNT(true)
                         FROM integrante_proyecto
-                        WHERE integrante_proyecto.proyecto_id = proyecto.id
+                        WHERE integrante_proyecto.proyecto_id = proyecto.id AND
+                              integrante_proyecto.aceptado = true
+                        LIMIT 1
                     ) as integrantes_proyecto
                 FROM usuario
                 LEFT JOIN integrante_proyecto
-                        ON integrante_proyecto.usuario_id = usuario.id
+                        ON integrante_proyecto.usuario_id = usuario.id AND
+                           integrante_proyecto.aceptado = true
                 LEFT JOIN proyecto
                         ON proyecto.id = integrante_proyecto.proyecto_id
                 INNER JOIN matricula

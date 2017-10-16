@@ -1,0 +1,42 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <h2 style="margin-top:0;">Listado de proyectos</h2>
+        <hr class="divider" />
+        <table class="table display" id="table_id">
+            <thead>
+                <tr>
+                    <th>Titulo de tesis</th>
+                    <th>Integrantes</th>
+                    <th>Cantidad de observaciones</th>
+                    <th>Fecha de presentacion</th>
+                    <th>Jurado</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for project in projects %}
+            <tr>
+                <td>{{ project.titulo }}</td>
+                <td>
+                    {% for member in project.members %}
+                    {{ member.nombres }} {{ member.apellidos }}<br />
+                    {% endfor %}
+                </td>
+                <td>{{ project.reviewed }}</td>
+                <td>{{ project.presentation_date or 'Aún no asignado' }}</td>
+                <td>
+                    {% if project.presentation_date is none %}
+                    No se asignó un jurado aún
+                    {% else %}
+                    {% for panel_member in decision_panel %}
+                    {{ panel_member.nombres }} {{ panel_member.apellidos }}<br />
+                    {% endfor %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

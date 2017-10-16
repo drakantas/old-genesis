@@ -1,0 +1,49 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    <form method="POST">
+        <div class="content_wrapper padded">
+            <h2 style="margin-top:0;">Crear proyecto de tésis</h2>
+            <hr>
+            {% if error is defined %}
+                <div class="alert alert-danger" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+            {% if success is defined %}
+                <div class="alert alert-success" role="alert">
+                    {{ success }}
+                </div>
+            {% endif %}
+            {% if errors is defined %}
+                <div class="alert alert-danger" role="alert"><ul>
+                {% for _e in errors %}
+                    <li>{{ _e }}</li>
+                {% endfor %}
+                </ul></div>
+            {% endif %}
+            <div class="alert alert-info">
+                Si algún compañero de clases no aparece en la lista, es probable que no se haya registrado aún o ya se haya unido a otro proyecto.<br />
+                Agregar a un compañero enviará una invitación que podrá ser rechazada, solo una vez tu compañero acepte recién formará parte del proyecto.<br />
+                <br />
+                Por último, el equipo de trabajo de un proyecto queda así hasta el día de presentación, no se cambia.
+            </div>
+            <div class="form-group">
+                <label for="title">Título de tésis</label>
+                <input type="text" name="title" id="title" class="form-control" placeholder="Título de tésis" {% if error is defined %}disabled{% endif %} />
+            </div>
+            <div class="form-group">
+                <label for="partner">Compañero(a) de equipo</label>
+                <select class="selectpicker" name="partner" id="partner" data-live-search="true" data-width="100%" {% if error is defined %}disabled{% endif %}>
+                    <option value="0">Ninguno</option>
+                    {% for student in students %}
+                    <option value="{{ student.id }}">{{ student.nombres }} {{ student.apellidos }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="content_wrapper text-right" style="background-color:transparent;box-shadow:none;">
+            <a href="/" class="btn btn-default btn-lg">Cancelar</a> <button type="submit" class="btn btn-success btn-lg" {% if error is defined %}disabled{% endif %}>Crear</button>
+        </div>
+    </form>
+{% endblock %}
