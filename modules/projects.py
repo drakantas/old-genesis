@@ -3,8 +3,8 @@ from aiohttp.web import View, HTTPNotFound
 from asyncpg.pool import PoolConnectionHolder
 
 
-from utils.helpers import view, permission_required
 from utils.validator import validator
+from utils.helpers import view, permission_required, flatten, school_term_to_str
 
 
 class Project(View):
@@ -30,6 +30,17 @@ class Project(View):
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchval(st_id, school)
+
+    async def fetch_school_term(self, st_id: int, school: int):
+        query = '''
+            SELECT *
+            FROM ciclo_academico
+            WHERE id = $1 AND
+                  escuela = $2
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(st_id, school)
 
     async def fetch_project(self, student: int, school_term: int):
         query = '''
@@ -62,6 +73,18 @@ class Project(View):
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school_term)
+
+    async def fetch_members(self, project: int):
+        query = '''
+            SELECT usuario_id, nombres, apellidos
+            FROM integrante_proyecto
+            LEFT JOIN usuario
+                   ON usuario.id = integrante_proyecto.usuario_id
+            WHERE integrante_proyecto.proyecto_id = $1 AND
+                  integrante_proyecto.aceptado = true
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(project)
 
 
 class CreateProject(Project):
@@ -161,23 +184,53 @@ class CreateProject(Project):
         return '{} ingresado ya forma parte de otro equipo'.format(name)
 
 
-class ViewProject(Project):
-    @view('projects.view')
+class OverviewProject(Project):
+    @view('projects.overview')
     async def get(self, user: dict):
+        # Falta consultar por ciclos académicos por id si es pasado por la URI
+        school_term = await self.fetch_current_school_term(user['escuela'])
 
-        return {}
+        if not school_term:
+            return {'error': 'No se encontró un ciclo académico'}
 
-    @view('projects.view')
-    async def post(self, user: dict):
-        return {}
+        if 'student' in self.request.match_info:
+            project = await self.fetch_project(int(self.request.match_info['student']), school_term)
+
+            if not project:
+                return {'error': 'No se encontró el proyecto. Es posible que el usuario no exista '
+                                 'o no haya registrado un proyecto aún'}
+        else:
+            project = await self.fetch_project(user['id'], school_term)
+
+            if not project:
+                return {'error': 'No tienes un proyecto registrado'}
+
+        school_term = await self.fetch_school_term(school_term, user['escuela'])
+        _school_term_str = school_term_to_str(school_term)
+
+        school_term = flatten(school_term, {})
+        school_term['str'] = _school_term_str
+
+        del _school_term_str
+
+        project = flatten(project, {})
+
+        project['members'] = flatten(await self.fetch_members(project['id']), {})
+
+        return {'school_term': school_term,
+                'project': project}
 
 
 routes = {
     'projects': {
         'create-new': CreateProject,
-        'view': {
-            'my-project': ViewProject,
-            '[0-9][1-9]*': ViewProject
+        'my-project': {
+            'overview': OverviewProject,
+            'settings': OverviewProject
+        },
+        '{student:[1-9][0-9]*}': {
+            'overview': OverviewProject,
+            'settings': OverviewProject
         }
     }
 }

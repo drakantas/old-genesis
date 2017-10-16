@@ -1,0 +1,24 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    <form method="POST">
+        {% if error is defined %}
+        <div class="content_wrapper padded" style="background-color:transparent;box-shadow:none;"><div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div></div>
+        {% endif %}
+        <div class="content_wrapper padded">
+            <strong>{{ school_term.str }}</strong>
+            <hr class="divider">
+            <div class="row">
+                <div class="col-md-9">
+                    <h2 style="margin-top:0;">{{ project.titulo }} <a href="/projects/{{ project.id }}/settings" class="btn btn-default btn-sm">Configuración de proyecto</a></h2>
+                </div>
+                <div class="col-md-3 text-right">
+                    <a href="#" class="btn btn-primary btn-lg">Registrar evento</a>
+                </div>
+            </div>
+            <hr class="divider">
+        </div>
+    </form>
+{% endblock %}

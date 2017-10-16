@@ -4,9 +4,8 @@ from typing import Union, Generator
 from aiohttp.web import View, json_response, HTTPNotFound, HTTPUnauthorized
 
 from utils.validator import validator
-from utils.map import map_users, parse_data_key
-from utils.helpers import view, flatten, pass_user, permission_required
-from modules.attendance import same_year_st, diff_year_str
+from utils.map import map_users
+from utils.helpers import view, flatten, pass_user, permission_required, school_term_to_str
 
 
 class ClassGrades(View):
@@ -196,7 +195,7 @@ class ClassGrades(View):
 
         def _g(stl: list) -> Generator:
             for st in stl:
-                yield st['id'], self.school_term_to_str(st)
+                yield st['id'], school_term_to_str(st)
 
         return list(_g(await self._get_school_terms(user['escuela'])))
 
@@ -210,18 +209,6 @@ class ClassGrades(View):
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school)
-
-    @staticmethod
-    def school_term_to_str(school_term: dict) -> str:
-        if school_term['fecha_comienzo'].year == school_term['fecha_fin'].year:
-            return same_year_st.format(year=school_term['fecha_comienzo'].year,
-                                       month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
-                                       month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
-
-        return diff_year_str.format(year1=school_term['fecha_comienzo'].year,
-                                    month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
-                                    year2=school_term['fecha_fin'].year,
-                                    month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
 
 
 class ReadGradeReport(View):

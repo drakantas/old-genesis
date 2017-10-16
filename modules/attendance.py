@@ -3,12 +3,8 @@ from typing import Generator
 from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, json_response, HTTPUnauthorized
 
-from utils.map import map_users, parse_data_key
-from utils.helpers import view, flatten, pass_user, permission_required
-
-
-same_year_st = '{year} {month1}-{month2}'
-diff_year_str = '{year1} {month1} - {year2} {month2}'
+from utils.map import map_users
+from utils.helpers import view, flatten, pass_user, permission_required, school_term_to_str
 
 
 class StudentsList(View):
@@ -44,7 +40,7 @@ class StudentsList(View):
 
         def _g(stl: list) -> Generator:
             for st in stl:
-                yield st['id'], self.school_term_to_str(st)
+                yield st['id'], school_term_to_str(st)
 
         return list(_g(await self._get_school_terms(user['escuela'])))
 
@@ -58,18 +54,6 @@ class StudentsList(View):
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school)
-
-    @staticmethod
-    def school_term_to_str(school_term: dict) -> str:
-        if school_term['fecha_comienzo'].year == school_term['fecha_fin'].year:
-            return same_year_st.format(year=school_term['fecha_comienzo'].year,
-                                       month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
-                                       month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
-
-        return diff_year_str.format(year1=school_term['fecha_comienzo'].year,
-                                    month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
-                                    year2=school_term['fecha_fin'].year,
-                                    month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
 
     async def get_grades(self, school_term: int):
         query = '''

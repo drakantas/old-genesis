@@ -9,6 +9,10 @@ from utils.auth import get_auth_data, NotAuthenticated
 from utils.map import parse_data_key
 
 
+same_year_st = '{year} {month1}-{month2}'
+diff_year_str = '{year1} {month1} - {year2} {month2}'
+
+
 def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', status_code: int = 200):
     def wrapper(func):
         _view_template = template
@@ -140,6 +144,17 @@ def flatten(data: Union[List, Dict, Record], time_config: dict) -> Union[List, D
         raise ValueError('Solo se soporta dict y list')
 
     return _data
+
+
+def school_term_to_str(school_term: dict) -> str:
+    if school_term['fecha_comienzo'].year == school_term['fecha_fin'].year:
+        return same_year_st.format(year=school_term['fecha_comienzo'].year,
+                                   month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
+                                   month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
+    return diff_year_str.format(year1=school_term['fecha_comienzo'].year,
+                                month1=parse_data_key(school_term['fecha_comienzo'].month, 'months'),
+                                year2=school_term['fecha_fin'].year,
+                                month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
 
 
 class PermissionNotFound(Exception):
