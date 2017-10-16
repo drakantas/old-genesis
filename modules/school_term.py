@@ -1,12 +1,12 @@
 import re
-from aiohttp.web import View
-from datetime import datetime
 from typing import Union
+from datetime import datetime
+from aiohttp.web import View
 from asyncpg.pool import PoolConnectionHolder
 
-from utils.helpers import view, humanize_datetime
 from utils.map import map_users
 from utils.validator import validator
+from utils.helpers import view, humanize_datetime, permission_required
 
 
 # Muy malo...
@@ -22,6 +22,7 @@ df = '%m/%d/%Y'
 
 class CreateSchoolTerm(View):
     @view('school_term.create')
+    @permission_required('gestionar_asistencias')
     async def get(self, user: dict):
         teachers = map_users(await self.fetch_teachers(user['escuela'], 2, self.request.app.db))
 
@@ -29,6 +30,8 @@ class CreateSchoolTerm(View):
                 'today': humanize_datetime(datetime.utcnow(), with_time=False)}
 
     @view('school_term.create')
+    @view('school_term.create')
+    @permission_required('gestionar_asistencias')
     async def post(self, user: dict):
         teachers = map_users(await self.fetch_teachers(user['escuela'], 2, self.request.app.db))
 
@@ -259,22 +262,8 @@ class CreateSchoolTerm(View):
             return await (await connection.prepare(query)).fetchval(date, school)
 
 
-class ViewSchoolTerm(View):
-    @view('school_term.view')
-    async def get(self):
-        return {}
-
-
-class UpdateSchoolTerm(View):
-    @view('school_term.update')
-    async def get(self):
-        return {}
-
-
 routes = {
     "school-term": {
-        "create": CreateSchoolTerm,
-        "view/{st_id:[1-9][0-9]*}": ViewSchoolTerm,
-        "update/{st_id:[1-9][0-9]*}": UpdateSchoolTerm
+        "create": CreateSchoolTerm
     }
 }

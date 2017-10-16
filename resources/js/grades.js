@@ -6,8 +6,10 @@ class Grades
         this.report = '#student_grade_report';
         this.assignGradeBtn = 'button.assign_grade';
         this.assignGrade = '#assign_grade';
+        this.myGrades = '#my_grades';
 
         this.studentBtnSelector = $(this.studentBtn);
+        this.myGrades = $(this.myGrades);
         this.reportSelector = $(this.report);
 
         this.assignGradeBtnSelector = $(this.assignGradeBtn);
@@ -35,6 +37,16 @@ class Grades
     registerEvents()
     {
         let $this = this;
+
+        if (this.myGrades !== null)
+        {
+            this.myGrades.on('click', (e) => {
+                e.preventDefault();
+
+                $this.fetchStudentGrades('my-own');
+                $this.reportSelector.modal();
+            });
+        }
 
         this.studentBtnSelector.on('click', (e) => {
             const student = $($(e.currentTarget).parent().parent().find('.student_id')[0]);

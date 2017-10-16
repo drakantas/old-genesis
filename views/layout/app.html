@@ -6,36 +6,75 @@
 <div id="sidebar">
     <ul class="metismenu app_nav">
         <li>
-            <a href="#"><span class="glyphicon glyphicon-home"></span> Inicio</a>
+            <a href="/"><span class="glyphicon glyphicon-home"></span> Inicio</a>
         </li>
+        {% if user.permissions.ver_listado_alumnos %}
         <li>
-            <a href="#">
-                <span class="glyphicon glyphicon-user"></span> Alumnos
+            <a href="/students/list">
+                <span class="glyphicon glyphicon-user"></span> Estudiantes
             </a>
         </li>
+        {% endif %}
+        {% if user.permissions.autorizar_estudiantes %}
         <li>
-            <a href="#">
-                <span class="glyphicon glyphicon-stats"></span> Mis notas
+            <a href="/students/authorize">
+                <span class="glyphicon glyphicon-ok-sign"></span> Autorizar estudiantes
             </a>
         </li>
-        <li>
-            <a href="#">
-                <span class="glyphicon glyphicon-stats"></span> Notas de clase
-            </a>
-        </li>
+        {% endif %}
         <li>
             <a href="#" class="has-arrow">
-                <span class="glyphicon glyphicon-education"></span> Proyectos
+                <span class="glyphicon glyphicon-stats"></span> Notas
             </a>
             <ul aria-expanded="true">
+                {% if user.permissions.ver_reportes_personales %}
                 <li>
-                    <a href="#">Un enlace</a>
+                    <a href="/grades/student-report/my-own" id="my_grades">
+                        Mis notas
+                    </a>
                 </li>
+                {% endif %}
+                {% if user.permissions.ver_notas_de_clase %}
+                <li>
+                    <a href="/grades/class-report">
+                        Reporte de notas de clase
+                    </a>
+                </li>
+                {% endif %}
+                {% if user.permissions.gestionar_notas %}
+                <li>
+                    <a href="/grades/class-report">
+                        Crear estructura de notas
+                    </a>
+                </li>
+                {% endif %}
             </ul>
         </li>
         <li>
             <a href="#" class="has-arrow">
-                <span class="glyphicon glyphicon-calendar"></span> Asistencia
+                <span class="glyphicon glyphicon-calendar"></span> Asistencias
+            </a>
+            <ul aria-expanded="true">
+                {% if user.permissions.ver_reportes_personales %}
+                <li>
+                    <a href="/attendance/student-report/my-own" id="my_attendance">Mi asistencia</a>
+                </li>
+                {% endif %}
+                {% if user.permissions.registrar_asistencia %}
+                <li>
+                    <a href="/attendance/register">Registrar asistencias</a>
+                </li>
+                {% endif %}
+                {% if user.permissions.gestionar_asistencias %}
+                <li>
+                    <a href="/school-term/create">Crear ciclo académico</a>
+                </li>
+                {% endif %}
+            </ul>
+        </li>
+        <li>
+            <a href="#" class="has-arrow">
+                <span class="glyphicon glyphicon-education"></span> Proyectos
             </a>
             <ul aria-expanded="true">
                 <li>
@@ -54,7 +93,7 @@
             </ul>
         </li>
         <li>
-            <a href="#"><span class="glyphicon glyphicon-off"></span> Salir</a>
+            <a href="/logout"><span class="glyphicon glyphicon-off"></span> Salir</a>
         </li>
     </ul>
 </div>
@@ -85,7 +124,9 @@
             </a>
             <ul class="dropdown-menu" aria-labelledby="userOptions">
                 <li><a href="/profile/{{ user.id }}">Mi perfíl</a></li>
-                <li><a href="/user/change-password">Cambiar contraseña</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="/settings/edit-profile">Actualizar datos de perfíl</a></li>
+                <li><a href="/settings/change-password">Cambiar contraseña</a></li>
                 <li role="separator" class="divider"></li>
                 <li><a href="/logout">Cerrar sesión</a></li>
             </ul>

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from datetime import datetime
 from typing import Union, Generator
-from aiohttp.web import View, json_response, HTTPNotFound
+from aiohttp.web import View, json_response, HTTPNotFound, HTTPUnauthorized
 
 from utils.validator import validator
 from utils.map import map_users, parse_data_key
@@ -227,7 +227,19 @@ class ClassGrades(View):
 class ReadGradeReport(View):
     @pass_user
     async def get(self, user: dict):
-        student_id = int(self.request.match_info['student_id'])
+
+        # Validar permisos...
+        if not user['permissions']['ver_reportes_personales'] and self.request.match_info['student_id'] == 'my-own':
+            raise HTTPUnauthorized
+        elif user['permissions']['ver_reportes_personales'] and self.request.match_info['student_id'] != 'my-own':
+            raise HTTPUnauthorized
+        elif not user['permissions']['ver_notas_de_clase'] and not user['permissions']['ver_reportes_personales']:
+            raise HTTPUnauthorized
+
+        if self.request.match_info['student_id'] == 'my-own':
+            student_id = user['id']
+        else:
+            student_id = int(self.request.match_info['student_id'])
 
         if 'school_term' in self.request.match_info:
             school_term_id = int(self.request.match_info['school_term'])
@@ -592,10 +604,11 @@ routes = {
         'class-report': ClassGrades,
         'class-report/school-term-{school_term:[1-9][0-9]*}': ClassGrades,
         'student-report': {
-            '{student_id:[1-9][0-9]*}': ReadGradeReport,
+            '{student_id:(?:[1-9][0-9]*|my-own)}': ReadGradeReport,
             'school-term-{school_term:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadGradeReport
         },
         'assign': AssignGrade,
         'update/{grade_id:[1-9][0-9]*}/student-{student_id:[1-9][0-9]*}': UpdateGrade
-    }
+    },
+    'school-term/create-grading-structure': CreateGradingStructure
 }

@@ -2,6 +2,9 @@ class Attendance
 {
     constructor()
     {
+        this.myAttendance = '#my_attendance';
+        this.myAttendance = $(this.myAttendance);
+
         this.registerEvents();
     }
 
@@ -27,6 +30,17 @@ class Attendance
 
             $('#student_attendance_report').modal();
         });
+
+        if (this.myAttendance !== null)
+        {
+            this.myAttendance.on('click', (e) => {
+                e.preventDefault();
+
+                $this.fetchSingleReport('my-own');
+
+                $('#student_attendance_report').modal();
+            });
+        }
     }
 
     fetchSingleReport(student, school_term = null)

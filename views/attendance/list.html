@@ -64,11 +64,18 @@
                         <td width="25%">{{ student.titulo_proyecto }}</td>
                         <td width="10%">{{ student.asistencia }}% <a class="attendance-btn" data-toggle="tooltip" data-placement="top" title="Ver reporte de asistencias"><span class="glyphicon glyphicon-question-sign"></span></a></td>
                         <td width="20%">
+                            {% if user.permissions.asignar_notas %}
                             <button type="button" class="btn table-btn assign_grade" data-toggle="tooltip" title="Asignar nota"><span class="glyphicon glyphicon-pencil"></span></button>
+                            <button type="button" class="btn table-btn update_grade" data-toggle="tooltip" title="Corregir nota"><span class="glyphicon glyphicon-erase"></span></button>
+                            {% endif %}
+                            {% if user.permissions.ver_notas_de_clase %}
                             <button type="button" class="btn table-btn student_grade_report" data-toggle="tooltip" title="Ver reporte de notas"><span class="glyphicon glyphicon-list-alt"></span></button>
+                            {% endif %}
+
+                            {% if user.permissions.ver_listado_proyectos %}
+                            {% if student.id_proyecto %}
                             <a href="/project/{{ student.id_proyecto }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
-                            {% if not student.id_proyecto %}
-                            {% else %}
+                            {% endif %}
                             {% endif %}
                         </td>
                     </tr>

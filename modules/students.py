@@ -2,18 +2,20 @@ from typing import Generator
 from aiohttp.web import View
 from asyncpg.pool import PoolConnectionHolder
 
-from utils.helpers import view
 from utils.map import map_users
+from utils.helpers import view, permission_required
 
 
-class ApproveUsers(View):
+class AuthorizeStudents(View):
     @view('admin.authorize_students')
+    @permission_required('autorizar_estudiantes')
     async def get(self, user: dict):
         students = await self._get_students(user, self.request.app.db)
 
         return {'students': students}
 
     @view('admin.authorize_students')
+    @permission_required('autorizar_estudiantes')
     async def post(self, user: dict):
         students = await self._get_students(user, self.request.app.db)
 
@@ -78,5 +80,5 @@ class ApproveUsers(View):
 
 
 routes = {
-    "admin/authorize-students": ApproveUsers
+    "students/authorize": AuthorizeStudents
 }

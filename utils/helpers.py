@@ -32,11 +32,6 @@ def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', stat
                 except NotAuthenticated:
                     raise
 
-                def _get_permissions(_user: dict):
-                    for k in _user.keys():
-                        if k.startswith('perm_'):
-                            yield k[5:], _user[k]
-
                 _context['user'] = flatten(user, {})
 
                 user_permissions = dict(_get_permissions(_context['user']))
@@ -57,12 +52,27 @@ def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', stat
     return wrapper
 
 
+def _get_permissions(_user: dict):
+    for k in _user.keys():
+        if k.startswith('perm_'):
+            yield k[5:], _user[k]
+
+
 def pass_user(func):
     async def _view(_self: View):
         try:
             user = await get_auth_data(_self.request)
         except NotAuthenticated:
             raise
+
+        user = flatten(user, {})
+
+        user_permissions = dict(_get_permissions(user))
+
+        user = {k: v for k, v in user.items() if not k.startswith('perm_')}
+
+        if 'permissions' not in user:
+            user['permissions'] = user_permissions
 
         return await func(_self, user)
     return _view
@@ -72,12 +82,11 @@ def permission_required(permission: str):
     def func_container(func):
         async def wrapper(*args):
             user = args[1]
-            print(user['permissions'])
 
             if permission not in user['permissions']:
                 raise PermissionError('El permiso {} no se encontró'.format(permission))
 
-            if not user['permissions'][permission]:
+            if user['permissions'][permission]:
                 return await func(*args)
             else:
                 raise HTTPUnauthorized

@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import Generator
 from asyncpg.pool import PoolConnectionHolder
-from aiohttp.web import View, json_response, HTTPNotFound
+from aiohttp.web import View, json_response, HTTPUnauthorized
 
 from utils.map import map_users, parse_data_key
-from utils.helpers import view, flatten, pass_user
+from utils.helpers import view, flatten, pass_user, permission_required
 
 
 same_year_st = '{year} {month1}-{month2}'
@@ -13,6 +13,7 @@ diff_year_str = '{year1} {month1} - {year2} {month2}'
 
 class StudentsList(View):
     @view('attendance.list')
+    @permission_required('ver_listado_alumnos')
     async def get(self, user: dict):
         if 'school_term' in self.request.match_info:
             school_term_id = await self.get_school_term(user['escuela'], int(self.request.match_info['school_term']))
@@ -167,7 +168,18 @@ class StudentsList(View):
 class ReadAttendanceReport(View):
     @pass_user
     async def get(self, user: dict):
-        student_id = int(self.request.match_info['student_id'])
+        # Validar permisos...
+        if not user['permissions']['ver_reportes_personales'] and self.request.match_info['student_id'] == 'my-own':
+            raise HTTPUnauthorized
+        elif user['permissions']['ver_reportes_personales'] and self.request.match_info['student_id'] != 'my-own':
+            raise HTTPUnauthorized
+        elif not user['permissions']['ver_listado_alumnos'] and not user['permissions']['ver_reportes_personales']:
+            raise HTTPUnauthorized
+
+        if self.request.match_info['student_id'] == 'my-own':
+            student_id = user['id']
+        else:
+            student_id = int(self.request.match_info['student_id'])
 
         if 'school_term_id' in self.request.match_info:
             school_term_id = int(self.request.match_info['school_term_id'])
@@ -292,6 +304,7 @@ class ReadAttendanceReport(View):
 
 class RegisterAttendance(View):
     @view('attendance.register')
+    @permission_required('registrar_asistencia')
     async def get(self, user: dict):
         students = await self.fetch_students(user['escuela'], self.request.app.db)
         schedule = await self.fetch_teacher_schedule(user['id'], self.request.app.db)
@@ -300,6 +313,7 @@ class RegisterAttendance(View):
                 'students': students}
 
     @view('attendance.register')
+    @permission_required('registrar_asistencia')
     async def post(self, user: dict):
         students = await self.fetch_students(user['escuela'], self.request.app.db)
         schedule = await self.fetch_teacher_schedule(user['id'], self.request.app.db)
@@ -404,7 +418,7 @@ routes = {
     },
     'attendance': {
         'register': RegisterAttendance,
-        'student-report/{student_id:[1-9][0-9]*}': ReadAttendanceReport,
+        'student-report/{student_id:(?:[1-9][0-9]*|my-own)}': ReadAttendanceReport,
         'student-report/school-term-{school_term_id:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadAttendanceReport
     }
 }
