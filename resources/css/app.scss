@@ -192,12 +192,14 @@
     border-right: 1px solid #D8D8D8;
 }
 
-#app_container > #sidebar > .app_nav {
+#app_container > #sidebar > .app_nav,
+#app_container > #sidebar > .app_nav > li > ul {
     list-style: none;
     padding: 0;
 }
 
-#app_container > #sidebar > .app_nav > li {
+#app_container > #sidebar > .app_nav > li,
+#app_container > #sidebar > .app_nav > li > ul > li {
     display: block;
     padding-left: 0;
     padding-right: 0;
@@ -225,12 +227,36 @@
 }
 
 #app_container > #sidebar > .app_nav > li > a:hover,
-#app_container > #sidebar > .app_nav > li > a:focus {
-    background-color: rgba(0, 0, 0, 0.1);
+#app_container > #sidebar > .app_nav > li > a:focus,
+#app_container > #sidebar > .app_nav > li > a:active,
+#app_container > #sidebar > .app_nav > li > a.active {
+    background-color: rgba(0, 0, 0, 0.075);
 }
 
-#app_container > #sidebar > .app_nav > li > a > .glyphicon {
+#app_container > #sidebar > .app_nav .glyphicon {
     margin-right: 12px;
+    font-size: 0.85em;
+}
+
+#app_container > #sidebar > .app_nav > li > ul > li > a {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #797979;
+    text-decoration: none;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    width: 300px;
+    padding-left: 45px;
+    padding-right: 30px;
+    -webkit-transition: 200ms ease-in-out background-color;
+    transition: 200ms ease-in-out background-color;
+}
+
+#app_container > #sidebar > .app_nav > li > ul > li > a:hover,
+#app_container > #sidebar > .app_nav > li > ul > li > a:focus,
+#app_container > #sidebar > .app_nav > li > ul > li > a:active {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 #app_container > #content {

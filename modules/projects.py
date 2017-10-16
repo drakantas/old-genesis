@@ -160,6 +160,7 @@ class CreateProject(Project):
 
         return '{} ingresado ya forma parte de otro equipo'.format(name)
 
+
 class ViewProject(Project):
     @view('projects.view')
     async def get(self, user: dict):

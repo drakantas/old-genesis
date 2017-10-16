@@ -30,21 +30,21 @@
                 {% if user.permissions.ver_reportes_personales %}
                 <li>
                     <a href="/grades/student-report/my-own" id="my_grades">
-                        Mis notas
+                        <span class="glyphicon glyphicon-menu-right"></span> Mis notas
                     </a>
                 </li>
                 {% endif %}
                 {% if user.permissions.ver_notas_de_clase %}
                 <li>
                     <a href="/grades/class-report">
-                        Reporte de notas de clase
+                        <span class="glyphicon glyphicon-menu-right"></span> Reporte de notas de clase
                     </a>
                 </li>
                 {% endif %}
                 {% if user.permissions.gestionar_notas %}
                 <li>
                     <a href="/grades/class-report">
-                        Crear estructura de notas
+                        <span class="glyphicon glyphicon-menu-right"></span> Crear estructura de notas
                     </a>
                 </li>
                 {% endif %}
@@ -57,17 +57,17 @@
             <ul aria-expanded="true">
                 {% if user.permissions.ver_reportes_personales %}
                 <li>
-                    <a href="/attendance/student-report/my-own" id="my_attendance">Mi asistencia</a>
+                    <a href="/attendance/student-report/my-own" id="my_attendance"><span class="glyphicon glyphicon-menu-right"></span> Mi asistencia</a>
                 </li>
                 {% endif %}
                 {% if user.permissions.registrar_asistencia %}
                 <li>
-                    <a href="/attendance/register">Registrar asistencias</a>
+                    <a href="/attendance/register"><span class="glyphicon glyphicon-menu-right"></span> Registrar asistencias</a>
                 </li>
                 {% endif %}
                 {% if user.permissions.gestionar_asistencias %}
                 <li>
-                    <a href="/school-term/create">Crear ciclo académico</a>
+                    <a href="/school-term/create"><span class="glyphicon glyphicon-menu-right"></span> Crear ciclo académico</a>
                 </li>
                 {% endif %}
             </ul>
@@ -78,7 +78,8 @@
             </a>
             <ul aria-expanded="true">
                 <li>
-                    <a href="#">Un enlace</a>
+                    <a href="/projects/create-new"><span class="glyphicon glyphicon-menu-right"></span> Crear proyecto de tésis</a>
+                    <a href="/projects/list"><span class="glyphicon glyphicon-menu-right"></span> Reporte de proyectos del ciclo</a>
                 </li>
             </ul>
         </li>
@@ -88,7 +89,7 @@
             </a>
             <ul aria-expanded="true">
                 <li>
-                    <a href="#">Un enlace</a>
+                    <a href="#"><span class="glyphicon glyphicon-menu-right"></span> Un enlace</a>
                 </li>
             </ul>
         </li>
