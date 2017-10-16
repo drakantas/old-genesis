@@ -5,7 +5,7 @@ from aiohttp.web import View, json_response, HTTPNotFound
 
 from utils.validator import validator
 from utils.map import map_users, parse_data_key
-from utils.helpers import view, flatten, pass_user
+from utils.helpers import view, flatten, pass_user, permission_required
 from modules.attendance import same_year_st, diff_year_str
 
 
@@ -24,6 +24,7 @@ class ClassGrades(View):
         Solo decorar los métodos que se están implementando, sea GET o POST, etc.
     """
     @view('grades.class_report')
+    @permission_required('ver_notas_de_clase')
     async def get(self, user: dict):
         # Primero necesitamos obtener el ciclo académico, sea el actual o uno que se ingresó en la uri
         if 'school_term' in self.request.match_info:  # Si se encuentra el parametro en la uri
@@ -358,6 +359,7 @@ class ReadGradeReport(View):
 
 class AssignGrade(View):
     @pass_user
+    @permission_required('asignar_notas')
     async def post(self, user: dict):
         data = await self.request.post()
 
@@ -470,6 +472,8 @@ class AssignGrade(View):
 
 
 class UpdateGrade(View):
+    @pass_user
+    @permission_required('asignar_notas')
     async def post(self):
         if 'grade_id' not in self.request.match_info or 'student_id' not in self.request.match_info:
             raise HTTPNotFound

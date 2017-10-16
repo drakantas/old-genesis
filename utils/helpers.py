@@ -1,8 +1,8 @@
 from asyncpg import Record
 from decimal import Decimal
-from aiohttp.web import View
 from datetime import datetime
 from typing import Union, List, Dict
+from aiohttp.web import View, HTTPUnauthorized
 from aiohttp_jinja2 import template as jinja2_template
 
 from utils.auth import get_auth_data, NotAuthenticated
@@ -32,8 +32,21 @@ def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', stat
                 except NotAuthenticated:
                     raise
 
+                def _get_permissions(_user: dict):
+                    for k in _user.keys():
+                        if k.startswith('perm_'):
+                            yield k[5:], _user[k]
+
                 _context['user'] = flatten(user, {})
-                _context.update(await func(_self, user))
+
+                user_permissions = dict(_get_permissions(_context['user']))
+
+                _context['user'] = {k: v for k, v in _context['user'].items() if not k.startswith('perm_')}
+
+                if 'permissions' not in _context['user']:
+                    _context['user']['permissions'] = user_permissions
+
+                _context.update(await func(_self, _context['user']))
             else:
                 _context.update(await func(_self))
 
@@ -53,6 +66,23 @@ def pass_user(func):
 
         return await func(_self, user)
     return _view
+
+
+def permission_required(permission: str):
+    def func_container(func):
+        async def wrapper(*args):
+            user = args[1]
+            print(user['permissions'])
+
+            if permission not in user['permissions']:
+                raise PermissionError('El permiso {} no se encontró'.format(permission))
+
+            if not user['permissions'][permission]:
+                return await func(*args)
+            else:
+                raise HTTPUnauthorized
+        return wrapper
+    return func_container
 
 
 def humanize_datetime(dt: datetime, with_time: bool = True, long: bool = True) -> str:
@@ -101,3 +131,7 @@ def flatten(data: Union[List, Dict, Record], time_config: dict) -> Union[List, D
         raise ValueError('Solo se soporta dict y list')
 
     return _data
+
+
+class PermissionNotFound(Exception):
+    pass

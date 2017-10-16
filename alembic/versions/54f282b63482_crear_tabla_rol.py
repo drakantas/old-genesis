@@ -27,6 +27,8 @@ def upgrade():
                     sa.Column('asignar_notas', sa.Boolean, nullable=False, server_default=sa.false()),
                     sa.Column('registrar_asistencia', sa.Boolean, nullable=False, server_default=sa.false()),
                     sa.Column('crear_proyecto', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('gestionar_asistencias', sa.Boolean, nullable=False, server_default=sa.false()),
+                    sa.Column('gestionar_notas', sa.Boolean, nullable=False, server_default=sa.false()),
                     sa.Column('gestionar_proyectos', sa.Boolean, nullable=False, server_default=sa.false()),
                     sa.Column('revisar_proyectos', sa.Boolean, nullable=False, server_default=sa.false()),
                     sa.Column('autorizar_estudiantes', sa.Boolean, nullable=False, server_default=sa.false()),
