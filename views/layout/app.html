@@ -78,18 +78,12 @@
             </a>
             <ul aria-expanded="true">
                 <li>
+                    {% if user.permissions.crear_proyecto %}
                     <a href="/projects/create-new"><span class="glyphicon glyphicon-menu-right"></span> Crear proyecto de tésis</a>
+                    {% endif %}
+                    {% if user.permissions.ver_listado_proyectos %}
                     <a href="/projects/list"><span class="glyphicon glyphicon-menu-right"></span> Reporte de proyectos del ciclo</a>
-                </li>
-            </ul>
-        </li>
-        <li>
-            <a href="#" class="has-arrow">
-                <span class="glyphicon glyphicon-blackboard"></span> Sustentaciones
-            </a>
-            <ul aria-expanded="true">
-                <li>
-                    <a href="#"><span class="glyphicon glyphicon-menu-right"></span> Un enlace</a>
+                    {% endif %}
                 </li>
             </ul>
         </li>

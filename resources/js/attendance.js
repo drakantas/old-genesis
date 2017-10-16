@@ -93,10 +93,14 @@ class Attendance
     {
         let period = "";
 
-        if (time >= 1200) {
+        if (time >= 1200 && time !== 2400) {
+            time -= 1200;
             period = "PM";
         }
         else {
+            if (time === 2400) {
+                time = 0;
+            }
             period = "AM";
         }
 
@@ -105,6 +109,7 @@ class Attendance
 
         let hours = _time[0], minutes = _time[1];
 
+
         if (typeof hours === 'undefined') {
             hours = "00";
         }
@@ -112,10 +117,17 @@ class Attendance
             hours = "0" + hours;
         }
 
+        if (hours === '00' && period === 'PM') {
+            hours = "12";
+        }
+
         if (typeof minutes === 'undefined') {
             minutes = "00";
         }
         else if (minutes.length === 0) {
+            minutes = minutes + "0";
+        }
+        else if (minutes.length === 1) {
             minutes = minutes + "0";
         }
 

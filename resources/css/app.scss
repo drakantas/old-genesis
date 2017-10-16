@@ -229,7 +229,7 @@
 #app_container > #sidebar > .app_nav > li > a:hover,
 #app_container > #sidebar > .app_nav > li > a:focus,
 #app_container > #sidebar > .app_nav > li > a:active,
-#app_container > #sidebar > .app_nav > li > a.active {
+#app_container > #sidebar > .app_nav > li.active > a {
     background-color: rgba(0, 0, 0, 0.075);
 }
 
