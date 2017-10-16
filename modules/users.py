@@ -1,14 +1,15 @@
 from typing import Union
 from base64 import b64encode
 from datetime import datetime
+from aiohttp_jinja2 import template
 from aiohttp_session import get_session
 from bcrypt import hashpw, checkpw, gensalt
-from aiohttp_jinja2 import template
+from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, web_request, HTTPFound
 
 from utils.map import map_users
-from utils.helpers import pass_user, view
 from utils.validator import validator
+from utils.helpers import pass_user, view
 
 
 class FailedAuth(Exception):
@@ -318,13 +319,38 @@ class ChangePassword(View):
         if not('current_password' in data and 'new_password' in data and 'repeat_new_password' in data):
             return {'errors': ['Data enviada no es correcta...']}
 
-        return {}
+        errors = await self.validate(data, user['id'])
 
-    async def validate(self, data: dict):
+        if errors:
+            return {'errors': errors}
+
+        await self.update(user['id'], hashpw(data['new_password'].encode('utf-8'), gensalt()))
+
+        return {'success': 'Se ha cambiado tu contraseña exitosamente'}
+
+    async def validate(self, data: dict, user: int):
         return await validator.validate([
-            ['Contraseña actual', data['current_password'], ''],
-            []
+            ['Contraseña actual', data['current_password'], 'len:8,16|password|custom', self._validate_password, user],
+            ['Nueva contraseña', data['new_password'], 'len:8,16|password'],
+            ['Repetir nueva contraseña', data['repeat_new_password'], 'repeat']
         ], self.request.app.db)
+
+    async def update(self, user: int, new_password: bytes):
+        async with self.request.app.db.acquire() as connection:
+            await connection.execute('''
+                UPDATE usuario SET credencial = $2 WHERE id = $1
+            ''', user, new_password.decode('utf-8'))
+
+    @staticmethod
+    async def _validate_password(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder,
+                                 user: int):
+        async with dbi.acquire() as connection:
+            current_password = (await (
+                await connection.prepare('SELECT credencial FROM usuario WHERE id = $1 LIMIT 1')
+            ).fetchval(user)).encode('utf-8')
+
+        if not checkpw(value.encode('utf-8'), current_password):
+            return '{} ingresada incorrecta'.format(name)
 
 
 routes = {
@@ -333,7 +359,8 @@ routes = {
     'register': Registration,
     'recover-password': RecoverPassword,
     'settings': {
-        'update-avatar': UpdateAvatar
+        'update-avatar': UpdateAvatar,
+        'change-password': ChangePassword
     },
     'users/list':  UsersList,
     'users/list/page-{page:[1-9][0-9]*}': UsersList
