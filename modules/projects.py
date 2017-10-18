@@ -1,5 +1,5 @@
 from datetime import datetime
-from aiohttp.web import View, HTTPNotFound
+from aiohttp.web import View, HTTPNotFound, json_response
 from asyncpg.pool import PoolConnectionHolder
 
 
@@ -221,16 +221,47 @@ class OverviewProject(Project):
                 'project': project}
 
 
+class RegisterReview(Project):
+    async def post(self):
+        if self.request.match_info['project'] == 'my-project':
+            raise HTTPNotFound
+
+        student_id = int(self.request.match_info['project'])
+
+        school_term = await self.fetch_current_school_term(1)
+
+        if not school_term:
+            return json_response({'message': 'No se encontró ciclo académico para la fecha y hora actual'}, status=400)
+
+        project = await self.fetch_project(student_id, school_term)
+
+        if not project:
+            return json_response({'message': 'No se encontró el proyecto para el estudiante pasado para el ciclo académico'}, status=400)
+
+        data = await self.request.post()
+
+        if not('review' in data and len(data) == 1):
+            return json_response({'message': 'Data malformada...'}, status=400)
+
+        errors = await self.validate(data)
+
+        if errors:
+            return json_response({'message': errors[0]}, status=400)
+
+        return json_response({'message': 'Se registró la tesis exitosamente'})
+
+    async def validate(self, data: dict):
+        return await validator.validate([
+            ['Observación', data['review'], 'len:16,4096']
+        ], self.request.app.db)
+
+
 routes = {
     'projects': {
         'create-new': CreateProject,
-        'my-project': {
+        '{project:(?:[1-9][0-9]*|my-project)}': {
             'overview': OverviewProject,
-            'settings': OverviewProject
+            'review': RegisterReview
         },
-        '{student:[1-9][0-9]*}': {
-            'overview': OverviewProject,
-            'settings': OverviewProject
-        }
     }
 }
