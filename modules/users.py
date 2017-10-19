@@ -5,7 +5,7 @@ from aiohttp_jinja2 import template
 from aiohttp_session import get_session
 from bcrypt import hashpw, checkpw, gensalt
 from asyncpg.pool import PoolConnectionHolder
-from aiohttp.web import View, web_request, HTTPFound
+from aiohttp.web import View, web_request, HTTPFound, HTTPNotFound
 
 from utils.map import map_users
 from utils.validator import validator
@@ -353,6 +353,113 @@ class ChangePassword(View):
             return '{} ingresada incorrecta'.format(name)
 
 
+class ReadProfile(View):
+    @view('user.view_profile')
+    async def get(self, user: dict):
+        if '_user_id' not in self.request.match_info:
+            raise HTTPNotFound  # No se pasó una id de usuario por la URI, 404
+
+        # Obtenemos la ID de usuario
+        _user_id = int(self.request.match_info['_user_id'])
+
+        _user = await self.get_user(_user_id)  # Consultar la BD por usuario
+
+        if not _user:
+            raise HTTPNotFound  # No se encontró al usuario, 404
+
+        return {'requested_user': map_users([_user])[0]}
+
+    async def get_user(self, user_id: int):
+        query = '''
+            SELECT id, tipo_documento, nombres, apellidos,
+                   direccion, correo_electronico, nro_telefono, nacionalidad,
+                   escuela, distrito, sexo, avatar
+            FROM usuario
+            WHERE id = $1
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(user_id)
+
+
+class EditProfile(View):
+    @view('user.edit_profile')
+    async def get(self, user: dict):
+        return {}
+
+    @view('user.edit_profile')
+    async def post(self, user: dict):
+        display_data = {}
+
+        student_id = user['id']
+
+        data = dict(await self.request.post())
+
+        if not all(['name' in data, 'last_name' in data, 'address' in data,
+                    'email' in data, 'phone' in data, 'nationality' in data,
+                    'district' in data, 'gender' in data]):
+            return {'errors': ['La data enviada no es la esperada...']}
+
+        errors = await self.validate(data, user['id'])
+
+        if not errors:
+
+            await self.update(student_id, data['name'], data['last_name'],
+                              data['address'], data['email'], int(data['phone']),
+                              data['nationality'], int(data['district']), int(data['gender']))
+
+            display_data['success'] = 'Se han registrado los cambios. Se han actualizado tus datos.'
+
+        else:
+            display_data['errors'] = errors
+
+        return display_data
+
+    async def validate(self, data: dict, user_id: int):
+        return await validator.validate([
+            ['Nombres', data['name'], 'len:8,64'],
+            ['Apellidos', data['last_name'], 'len:8,84'],
+            ['Dirección', data['address'], 'len:8,84'],
+            ['Email', data['email'], 'len:14,128|email|custom', self._validate_email, user_id],
+            ['Teléfono', data['phone'], 'digits|len:9'],
+            ['Nacionalidad', data['nationality'], 'len:2'],
+            ['Distrito', data['district'], 'digits|len:1'],
+            ['Sexo', data['gender'], 'digits|len:1']
+        ], self.request.app.db)
+
+    @staticmethod
+    async def _validate_email(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder, user_id: int):
+        query = '''
+            SELECT true
+            FROM usuario
+            WHERE id != $1 AND
+                  correo_electronico = $2
+        '''
+
+        async with dbi.acquire() as connection:
+            statement = await connection.prepare(query)
+            status = await statement.fetchval(user_id, value)
+
+        status = status or False
+
+        if status:
+            return 'El correo electrónico {} ya se encuentra en uso por otro usuario'.format(value)
+
+    async def update(self, id_: int, name: str, last_name: str,
+                     address: str, email: str, phone: int,
+                     nationality: str, district: int, gender: int):
+        query = '''
+            UPDATE usuario 
+            SET nombres = $2, apellidos = $3, direccion = $4, correo_electronico = $5, nro_telefono = $6,
+                nacionalidad = $7, distrito = $8, sexo = $9
+            WHERE id = $1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(id_, name, last_name,
+                                                                 address, email, phone,
+                                                                 nationality, district, gender)
+
+
 routes = {
     'login': Login,
     'logout': Logout,
@@ -360,8 +467,10 @@ routes = {
     'recover-password': RecoverPassword,
     'settings': {
         'update-avatar': UpdateAvatar,
-        'change-password': ChangePassword
+        'change-password': ChangePassword,
+        'edit-profile': EditProfile
     },
     'users/list':  UsersList,
-    'users/list/page-{page:[1-9][0-9]*}': UsersList
+    'users/list/page-{page:[1-9][0-9]*}': UsersList,
+    'profile/{_user_id:[0-9]+}': ReadProfile
 }

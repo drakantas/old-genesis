@@ -4,6 +4,38 @@
     <div class="content_wrapper padded">
         <h2 style="margin-top:0;">Listado de proyectos</h2>
         <hr class="divider" />
+        <div class="row students_list_header">
+            <div class="col-sm-6">
+                <select class="selectpicker" id="school_term_selector" data-live-search="true" data-width="auto">
+                    {% for school_term in school_terms %}
+                    {% if school_term.0 == current_school_term_id %}
+                        <option value="{{ school_term.0 }}" selected>{{ school_term.1 }}</option>
+                    {% else %}
+                    <option value="{{ school_term.0 }}">{{ school_term.1 }}</option>
+                    {% endif %}
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-6 text-right">
+                {% if school_term_has_not_begun is defined %}
+                <a href="#" class="btn btn-default disabled"><span class="glyphicon glyphicon-download-alt"></span> Exportar como .PDF</a>
+                {% else %}
+                <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span> Exportar como .PDF</a>
+                {% endif %}
+            </div>
+        </div>
+        {% if error is defined %}
+        <hr class="divider">
+        <div class="alert alert-info">
+            {{ error }}.
+        </div>
+        {% else %}
+        {% if projects|length == 0 %}
+        <hr class="divider">
+        <div class="alert alert-info">
+            No hay proyectos registrados aún.
+        </div>
+        {% else %}
         <table class="table display" id="table_id">
             <thead>
                 <tr>
@@ -38,5 +70,7 @@
             {% endfor %}
             </tbody>
         </table>
+        {% endif %}
+        {% endif %}
     </div>
 {% endblock %}

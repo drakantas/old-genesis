@@ -8,14 +8,14 @@ from utils.helpers import view, permission_required
 
 class AuthorizeStudents(View):
     @view('admin.authorize_students')
-    #@permission_required('autorizar_estudiantes')
+    @permission_required('autorizar_estudiantes')
     async def get(self, user: dict):
         students = await self._get_students(user, self.request.app.db)
 
         return {'students': students}
 
     @view('admin.authorize_students')
-    #@permission_required('autorizar_estudiantes')
+    @permission_required('autorizar_estudiantes')
     async def post(self, user: dict):
         students = await self._get_students(user, self.request.app.db)
 
