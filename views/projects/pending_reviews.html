@@ -1,0 +1,47 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <h2 style="margin-top:0;">Observaciones pendientes</h2>
+        <hr class="divider" />
+        <div class="alert alert-info">
+            Haga clic sobre las observaciones en la tabla, esto abrirá un formulario en el cual
+            podrá ingresar la observación que desea registrar.
+        </div>
+        {% if not reviews %}
+        <div class="alert alert-warning">
+            No tienes observaciones pendientes por realizar.
+        </div>
+        {% else %}
+        <table class="table table-hover" id="pending_reviews_list">
+            <thead>
+                <tr>
+                    <th>Titulo de tesis</th>
+                    <th>Integrantes</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for review in reviews %}
+            <tr data-project="{{ review.proyecto_id }}" data-id="{{ review.id }}">
+                <td>{{ review.proyecto_titulo }}</td>
+                <td>{{ review.proyecto_integrantes }}</td>
+                <td>
+                    {% if review.finalizado %}
+                    <span class="label label-success">Terminado</span>
+                    {% else %}
+                    <span class="label label-warning">Pendiente</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block extensions %}
+    {{ super() }}
+    {% include 'projects/register_review.html' %}
+{% endblock %}

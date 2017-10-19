@@ -26,9 +26,11 @@
     "axios": "^0.16.2",
     "bootstrap-sass": "^3.3.7",
     "bootstrap-select": "^1.12.4",
+    "codemirror": "^5.30.0",
     "cross-env": "^5.0.5",
     "eonasdan-bootstrap-datetimepicker": "^4.17.47",
     "jquery": "^3.2.1",
-    "metismenu": "^2.7.0"
+    "metismenu": "^2.7.0",
+    "summernote": "^0.8.8"
   }
 }

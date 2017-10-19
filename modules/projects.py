@@ -23,7 +23,7 @@ class Project(View):
             raise HTTPUnauthorized
 
         if self.request.match_info['project'] != 'my-project':
-            project = await self.fetch_project_by_id(int(self.request.match_info['project']))
+            project = await self.fetch_project_by_id(int(self.request.match_info['project']), user['escuela'])
 
             if not project:
                 raise HTTPNotFound
@@ -90,6 +90,38 @@ class Project(View):
 
         del author
         return json_response(review)
+
+    async def get_pending_reviews(self, user):
+        reviews = await self.fetch_pending_reviews(user['id'], user['escuela'])
+
+        if not reviews:
+            return False
+
+        return reviews
+
+    async def fetch_pending_reviews(self, user: int, school: int):
+        query = '''
+            SELECT observacion_proyecto.proyecto_id, proyecto.titulo as proyecto_titulo, 
+                   observacion_proyecto.finalizado, observacion_proyecto.usuario_id as autor_id,
+                   observacion_proyecto.id,
+                   (SELECT STRING_AGG(CONCAT(usuario.nombres, ' ', usuario.apellidos), '<br />')
+                    FROM integrante_proyecto
+                    LEFT JOIN usuario ON usuario.id = integrante_proyecto.usuario_id
+                    WHERE integrante_proyecto.proyecto_id = observacion_proyecto.proyecto_id AND
+                          integrante_proyecto.aceptado = true) as proyecto_integrantes
+            FROM observacion_proyecto
+            LEFT JOIN proyecto
+                   ON proyecto.id = observacion_proyecto.proyecto_id
+            WHERE observacion_proyecto.usuario_id = $1 AND
+                  proyecto.ciclo_acad_id = (SELECT id FROM ciclo_academico
+                                            WHERE ciclo_academico.fecha_comienzo <= $2 AND
+                                                  ciclo_academico.fecha_fin >= $2 AND
+                                                  ciclo_academico.escuela = $3
+                                            LIMIT 1) AND
+                  observacion_proyecto.finalizado = false
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(user, datetime.utcnow(), school)
 
     async def fetch_project_reviews(self, project: int):
         query = '''
@@ -172,19 +204,20 @@ class Project(View):
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchrow(school_term, student)
 
-    async def fetch_project_by_id(self, project: int):
+    async def fetch_project_by_id(self, project: int, school: int):
         query = '''
             SELECT proyecto.id, proyecto.titulo, ciclo_academico.fecha_comienzo as ciclo_fecha_comienzo,
             ciclo_academico.fecha_fin as ciclo_fecha_fin, ciclo_academico.id as ciclo_id
             FROM proyecto
             INNER JOIN ciclo_academico
                     ON ciclo_academico.id = proyecto.ciclo_acad_id
-            WHERE proyecto.id = $1
+            WHERE proyecto.id = $1 AND
+                  ciclo_academico.escuela = $2
             LIMIT 1
         '''
 
         async with self.request.app.db.acquire() as connection:
-            return await (await connection.prepare(query)).fetchrow(project)
+            return await (await connection.prepare(query)).fetchrow(project, school)
 
     async def fetch_fellas(self, school_term: int):
         query = '''
@@ -335,11 +368,11 @@ class CreateProject(Project):
         return '{} ingresado ya forma parte de otro equipo'.format(name)
 
 
-class PendingReviews(Project):
+class PendingReviewsList(Project):
     @view('projects.pending_reviews')
     @permission_required('revisar_proyectos')
     async def get(self, user: dict):
-        return {}
+        return {'reviews': await self.get_pending_reviews(user)}
 
 
 class SingleReview(Project):
@@ -355,21 +388,19 @@ class SingleReview(Project):
         if self.request.match_info['project'] == 'my-project':
             raise HTTPNotFound
 
-        student_id = int(self.request.match_info['project'])
-        review_id = int(self.request.match_info['review'])
-
         school_term = await self.fetch_current_school_term(user['escuela'])
 
         if not school_term:
             return json_response({'message': 'No se encontró ciclo académico para la fecha y hora actual'}, status=400)
 
-        project = await self.fetch_project(student_id, school_term)
+        project = await self.fetch_project_by_id(int(self.request.match_info['project']), user['escuela'])
 
         if not project:
             return json_response({'message': 'No se encontró el proyecto para el estudiante pasado para el '
                                              'ciclo académico'}, status=400)
 
-        review = await self.fetch_review(project['id'], user['id'], review_id, is_published=False, is_empty=True)
+        review = await self.fetch_review(project['id'], user['id'], int(self.request.match_info['review']),
+                                         is_published=False, is_empty=True)
 
         if not review:
             return json_response({'message': 'No se encontró la observación seleccionada'}, status=400)
@@ -379,28 +410,32 @@ class SingleReview(Project):
         if not check_form_data(data, 'body'):
             return json_response({'message': 'Data malformada...'}, status=400)
 
-        errors = await self.validate(data)
+        body = data['body'].replace('<p><br></p>', '')
+
+        errors = await self.validate(body)
 
         if errors:
             return json_response({'message': errors[0]}, status=400)
 
-        await self.update(review['id'], data['body'])
+        await self.update(review['id'], body)
+
+        del body
 
         return json_response({'message': 'Se registró la observación de tesis exitosamente'})
 
-    async def validate(self, data: dict):
+    async def validate(self, body: str):
         return await validator.validate([
-            ['Observación', data['body'], 'len:16,4096']
+            ['Observación', body, 'len:16,4096']
         ], self.request.app.db)
 
     async def update(self, review: int, body: str):
         async with self.request.app.db.acquire() as connection:
             return await connection.execute('''
                     UPDATE observacion_proyecto
-                    SET contenido = $1 AND
+                    SET contenido = $2,
                         finalizado = true
-                    WHERE id = $2
-                ''', body, review)
+                    WHERE id = $1
+                ''', review, body)
 
 
 class ProjectOverview(Project):
@@ -449,6 +484,7 @@ routes = {
             'reviews': ProjectReviews,
             'files': ProjectFiles,
             'review/{review:[1-9][0-9]*}': SingleReview
-        }
+        },
+        'pending-reviews': PendingReviewsList
     }
 }
