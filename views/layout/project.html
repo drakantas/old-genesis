@@ -53,3 +53,8 @@
     {% block project_page %}
     {% endblock %}
 {% endblock %}
+
+{% block extensions %}
+    {{ super() }}
+    {% include 'projects/read_review.html' %}
+{% endblock %}

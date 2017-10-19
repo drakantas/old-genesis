@@ -70,6 +70,60 @@ class Project(View):
                 return True
         return False
 
+    async def get_reviews(self, project: int):
+        reviews = await self.fetch_project_reviews(project)
+        return list(reviews)
+
+    async def get_review(self, project: int):
+        review = await self.fetch_review_by_id(project, int(self.request.match_info['review']))
+
+        if not review:
+            raise HTTPNotFound
+
+        if review['contenido'] == '' or not review['finalizado']:
+            return json_response({'message': 'Observación pendiente por ser realizada'}, status=412)
+
+        author = {k[6:]: v for k, v in review.items() if k.startswith('autor_')}
+
+        review = {k: v for k, v in review.items() if not k.startswith('autor_')}
+        review['author'] = author
+
+        del author
+        return json_response(review)
+
+    async def fetch_project_reviews(self, project: int):
+        query = '''
+            SELECT observacion_proyecto.id, usuario.nombres, usuario.apellidos, rol_usuario.desc as rol, proyecto_id, finalizado
+            FROM observacion_proyecto
+            INNER JOIN usuario
+                    ON usuario.id = observacion_proyecto.usuario_id
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE proyecto_id = $1
+            ORDER BY observacion_proyecto.id DESC
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(project)
+
+    async def fetch_review_by_id(self, project: int, review: int):
+        query = '''
+            SELECT observacion_proyecto.contenido, usuario.id as autor_id,
+                   rol_usuario.desc as autor_rol, usuario.nombres as autor_nombres,
+                   usuario.apellidos as autor_apellidos, observacion_proyecto.finalizado
+            FROM observacion_proyecto
+            INNER JOIN proyecto
+                    ON proyecto.id = observacion_proyecto.proyecto_id
+            INNER JOIN usuario
+                    ON usuario.id = observacion_proyecto.usuario_id
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE proyecto.id = $1 AND
+                  observacion_proyecto.id = $2
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(project, review)
+
     async def fetch_current_school_term(self, school: int):
         query = '''
             SELECT *
@@ -219,7 +273,7 @@ class CreateProject(Project):
             return {'error': 'Data enviada no es correcta',
                     'students': await self.fetch_fellas(school_term['id'])}
 
-        students = await self.fetch_fellas(school_term)
+        students = await self.fetch_fellas(school_term['id'])
 
         errors = await self.validate(data, students)
 
@@ -281,7 +335,20 @@ class CreateProject(Project):
         return '{} ingresado ya forma parte de otro equipo'.format(name)
 
 
-class RegisterReview(Project):
+class PendingReviews(Project):
+    @view('projects.pending_reviews')
+    @permission_required('revisar_proyectos')
+    async def get(self, user: dict):
+        return {}
+
+
+class SingleReview(Project):
+    @pass_user
+    async def get(self, user: dict):
+        project = await self.get_project(user)
+
+        return await self.get_review(project['id'])
+
     @pass_user
     async def post(self, user: dict):
         # No puedes ver tu propio proyecto, porque esta vista es solo accesible por evaluadores
@@ -329,11 +396,11 @@ class RegisterReview(Project):
     async def update(self, review: int, body: str):
         async with self.request.app.db.acquire() as connection:
             return await connection.execute('''
-                UPDATE observacion_proyecto
-                SET contenido = $1 AND
-                    finalizado = true
-                WHERE id = $2
-            ''', body, review)
+                    UPDATE observacion_proyecto
+                    SET contenido = $1 AND
+                        finalizado = true
+                    WHERE id = $2
+                ''', body, review)
 
 
 class ProjectOverview(Project):
@@ -353,9 +420,11 @@ class ProjectReviews(Project):
     async def get(self, user: dict):
         project = await self.get_project(user)
         members = await self.get_members(project)
+        reviews = await self.get_reviews(project['id'])
 
         return {'project': project,
                 'members': members,
+                'reviews': reviews,
                 'is_member': await self.is_member(user, members),
                 'location': 'reviews'}
 
@@ -379,7 +448,7 @@ routes = {
             'overview': ProjectOverview,
             'reviews': ProjectReviews,
             'files': ProjectFiles,
-            'review-{review:[1-9][0-9]*}': RegisterReview
+            'review/{review:[1-9][0-9]*}': SingleReview
         }
     }
 }

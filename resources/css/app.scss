@@ -407,3 +407,7 @@ div[class^='schedule']:last-child {
     text-align: center;
     padding: 5px;
 }
+
+#reviews_list > tbody > tr {
+    cursor: pointer;
+}

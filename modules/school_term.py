@@ -30,7 +30,6 @@ class CreateSchoolTerm(View):
                 'today': humanize_datetime(datetime.utcnow(), with_time=False)}
 
     @view('school_term.create')
-    @view('school_term.create')
     @permission_required('gestionar_asistencias')
     async def post(self, user: dict):
         teachers = map_users(await self.fetch_teachers(user['escuela'], 2, self.request.app.db))
