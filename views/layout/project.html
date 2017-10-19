@@ -1,0 +1,55 @@
+{% extends "layout/app.html" %}
+
+{% block content %}
+    {% if not project.activo %}
+    <div class="content_wrapper padded" style="background-color:transparent;box-shadow:none;"><div class="alert alert-info" role="alert">
+        Este proyecto es de hace uno o más ciclos.
+    </div></div>
+    {% endif %}
+    <div class="content_wrapper padded">
+        <strong>{{ project.ciclo_str }}</strong>
+        <hr class="divider">
+        <div class="row">
+            <div class="col-md-9">
+                <h2 style="margin-top:0;">{{ project.titulo }} {% if is_member %}<a href="/projects/{{ project.id }}/settings" class="btn btn-default btn-sm">Configuración de proyecto</a>{% endif %}</h2>
+            </div>
+            <div class="col-md-3 text-right">
+                {% if is_member %}
+                <a href="/projects/{{ project.id }}/add-file" class="btn btn-primary btn-lg">Agregar archivo</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="content_wrapper padded">
+        <h3 style="margin-top:0;">{% if members|length == 1 %}Autor{% else %}Autores{% endif %}</h3>
+        <div class="list-group" style="margin:0;">
+            {% for member in members %}
+            <a href="/profile/{{ member.usuario_id }}" class="list-group-item">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        {{ member.tipo_documento }} <strong>{{ member.usuario_id }}</strong>
+                    </div>
+                    <div class="col-md-9">
+                        {{ member.nombres }} {{ member.apellidos }}
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="content_wrapper">
+        <ul class="nav nav-justified">
+            <li {% if location == 'overview' %}class="active"{% endif %}>
+                <a href="/projects/{% if user.permissions.crear_proyecto %}my-project{% else %}{{ project.id }}{% endif %}/overview">Resumen</a>
+            </li>
+            <li {% if location == 'files' %}class="active"{% endif %}>
+                <a href="/projects/{% if user.permissions.crear_proyecto %}my-project{% else %}{{ project.id }}{% endif %}/files">Archivos</a>
+            </li>
+            <li {% if location == 'reviews' %}class="active"{% endif %}>
+                <a href="/projects/{% if user.permissions.crear_proyecto %}my-project{% else %}{{ project.id }}{% endif %}/reviews">Observaciones</a>
+            </li>
+        </ul>
+    </div>
+    {% block project_page %}
+    {% endblock %}
+{% endblock %}

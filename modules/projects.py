@@ -1,16 +1,78 @@
 from datetime import datetime
-from aiohttp.web import View, HTTPNotFound, json_response
+from aiohttp.web import View, HTTPNotFound, json_response, HTTPUnauthorized
 from asyncpg.pool import PoolConnectionHolder
 
 
 from utils.validator import validator
-from utils.helpers import view, permission_required, flatten, school_term_to_str
+from utils.helpers import view, permission_required, flatten, school_term_to_str, pass_user, check_form_data
 
 
 class Project(View):
+    async def check_permissions(self, user: dict):
+        if user['permissions']['crear_proyecto'] and self.request.match_info['project'] != 'my-project':
+            return False
+        elif not user['permissions']['crear_proyecto'] and self.request.match_info['project'] == 'my-project':
+            return False
+        elif not user['permissions']['crear_proyecto'] and not user['permissions']['revisar_proyectos'] and \
+                not user['permissions']['gestionar_proyectos']:
+            return False
+        return True
+
+    async def get_project(self, user: dict) -> dict:
+        if not await self.check_permissions(user):
+            raise HTTPUnauthorized
+
+        if self.request.match_info['project'] != 'my-project':
+            project = await self.fetch_project_by_id(int(self.request.match_info['project']))
+
+            if not project:
+                raise HTTPNotFound
+
+            project = dict(project)
+            project['ciclo_str'] = school_term_to_str({k[6:]: v for k, v in project.items() if k.startswith('ciclo_')})
+
+        else:
+            school_term = await self.fetch_current_school_term(user['escuela'])
+
+            if not school_term:
+                raise HTTPNotFound
+
+            project = await self.fetch_project(user['id'], school_term['id'])
+
+            if not project:
+                raise HTTPNotFound
+
+            project = dict(project)
+
+            project['ciclo_fecha_comienzo'] = school_term['fecha_comienzo']
+            project['ciclo_fecha_fin'] = school_term['fecha_fin']
+            project['ciclo_id'] = school_term['id']
+            project['ciclo_str'] = school_term_to_str(school_term)
+
+            del school_term
+
+        if not project:
+            raise HTTPNotFound
+
+        project['activo'] = project['ciclo_fecha_comienzo'] <= datetime.utcnow() <= project['ciclo_fecha_fin']
+
+        return flatten(project, {})
+
+    async def get_members(self, project: dict):
+        return flatten(await self.fetch_members(project['id']), {})
+
+    @staticmethod
+    async def is_member(user: dict, members: list):
+        for m in members:
+            if m['usuario_id'] != user['id']:
+                continue
+            else:
+                return True
+        return False
+
     async def fetch_current_school_term(self, school: int):
         query = '''
-            SELECT id
+            SELECT *
             FROM ciclo_academico
             WHERE $1 >= fecha_comienzo AND
                   $1 <= fecha_fin AND
@@ -18,18 +80,18 @@ class Project(View):
             LIMIT 1
         '''
         async with self.request.app.db.acquire() as connection:
-            return await (await connection.prepare(query)).fetchval(datetime.utcnow(), school)
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
 
     async def school_term(self, st_id: int, school: int):
         query = '''
-            SELECT id
+            SELECT *
             FROM ciclo_academico
             WHERE id = $1 AND
                   escuela = $2
             LIMIT 1
         '''
         async with self.request.app.db.acquire() as connection:
-            return await (await connection.prepare(query)).fetchval(st_id, school)
+            return await (await connection.prepare(query)).fetchrow(st_id, school)
 
     async def fetch_school_term(self, st_id: int, school: int):
         query = '''
@@ -56,6 +118,20 @@ class Project(View):
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchrow(school_term, student)
 
+    async def fetch_project_by_id(self, project: int):
+        query = '''
+            SELECT proyecto.id, proyecto.titulo, ciclo_academico.fecha_comienzo as ciclo_fecha_comienzo,
+            ciclo_academico.fecha_fin as ciclo_fecha_fin, ciclo_academico.id as ciclo_id
+            FROM proyecto
+            INNER JOIN ciclo_academico
+                    ON ciclo_academico.id = proyecto.ciclo_acad_id
+            WHERE proyecto.id = $1
+            LIMIT 1
+        '''
+
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(project)
+
     async def fetch_fellas(self, school_term: int):
         query = '''
             SELECT usuario.id, nombres, apellidos
@@ -76,7 +152,8 @@ class Project(View):
 
     async def fetch_members(self, project: int):
         query = '''
-            SELECT usuario_id, nombres, apellidos
+            SELECT usuario_id, CASE WHEN usuario.tipo_documento = 0 THEN 'DNI' ELSE 'Carné de extranjería' END
+                   as tipo_documento, nombres, apellidos
             FROM integrante_proyecto
             LEFT JOIN usuario
                    ON usuario.id = integrante_proyecto.usuario_id
@@ -85,6 +162,26 @@ class Project(View):
         '''
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(project)
+
+    async def fetch_review(self, project: int, author: int, review: int,
+                           is_published: bool = True, is_empty: bool = True):
+        if is_empty:
+            _is_empty_q = 'AND contenido IS NULL'
+        else:
+            _is_empty_q = ''
+
+        query = '''
+            SELECT *
+            FROM observacion_proyecto
+            WHERE proyecto_id = $1 AND
+                  usuario_id = $2 AND
+                  id = $3 AND
+                  finalizado = $4{0}
+            LIMIT 1
+        '''.format(_is_empty_q)
+
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(project, author, review, is_published)
 
 
 class CreateProject(Project):
@@ -96,12 +193,12 @@ class CreateProject(Project):
         if not school_term:
             return {'error': 'No se encontró un ciclo académico'}
 
-        project = await self.fetch_project(user['id'], school_term)
+        project = await self.fetch_project(user['id'], school_term['id'])
 
         if project:
             return {'error': 'Ya tienes un proyecto registrado'}
 
-        return {'students': await self.fetch_fellas(school_term)}
+        return {'students': await self.fetch_fellas(school_term['id'])}
 
     @view('projects.create')
     @permission_required('crear_proyecto')
@@ -111,22 +208,22 @@ class CreateProject(Project):
         if not school_term:
             return {'error': 'No se encontró un ciclo académico'}
 
-        project = await self.fetch_project(user['id'], school_term)
+        project = await self.fetch_project(user['id'], school_term['id'])
 
         if project:
             return {'error': 'Ya tienes un proyecto registrado'}
 
         data = await self.request.post()
 
-        if not('partner' in data and 'title' in data):
+        if not check_form_data(data, 'title', 'partner'):
             return {'error': 'Data enviada no es correcta',
-                    'students': await self.fetch_fellas(school_term)}
+                    'students': await self.fetch_fellas(school_term['id'])}
 
         students = await self.fetch_fellas(school_term)
 
         errors = await self.validate(data, students)
 
-        await self.create(data, school_term, user['id'])
+        await self.create(data, school_term['id'], user['id'])
 
         if errors:
             return {'errors': errors,
@@ -184,51 +281,17 @@ class CreateProject(Project):
         return '{} ingresado ya forma parte de otro equipo'.format(name)
 
 
-class OverviewProject(Project):
-    @view('projects.overview')
-    async def get(self, user: dict):
-        # Falta consultar por ciclos académicos por id si es pasado por la URI
-        school_term = await self.fetch_current_school_term(user['escuela'])
-
-        if not school_term:
-            return {'error': 'No se encontró un ciclo académico'}
-
-        if 'student' in self.request.match_info:
-            project = await self.fetch_project(int(self.request.match_info['student']), school_term)
-
-            if not project:
-                return {'error': 'No se encontró el proyecto. Es posible que el usuario no exista '
-                                 'o no haya registrado un proyecto aún'}
-        else:
-            project = await self.fetch_project(user['id'], school_term)
-
-            if not project:
-                return {'error': 'No tienes un proyecto registrado'}
-
-        school_term = await self.fetch_school_term(school_term, user['escuela'])
-        _school_term_str = school_term_to_str(school_term)
-
-        school_term = flatten(school_term, {})
-        school_term['str'] = _school_term_str
-
-        del _school_term_str
-
-        project = flatten(project, {})
-
-        project['members'] = flatten(await self.fetch_members(project['id']), {})
-
-        return {'school_term': school_term,
-                'project': project}
-
-
 class RegisterReview(Project):
-    async def post(self):
+    @pass_user
+    async def post(self, user: dict):
+        # No puedes ver tu propio proyecto, porque esta vista es solo accesible por evaluadores
         if self.request.match_info['project'] == 'my-project':
             raise HTTPNotFound
 
         student_id = int(self.request.match_info['project'])
+        review_id = int(self.request.match_info['review'])
 
-        school_term = await self.fetch_current_school_term(1)
+        school_term = await self.fetch_current_school_term(user['escuela'])
 
         if not school_term:
             return json_response({'message': 'No se encontró ciclo académico para la fecha y hora actual'}, status=400)
@@ -236,11 +299,17 @@ class RegisterReview(Project):
         project = await self.fetch_project(student_id, school_term)
 
         if not project:
-            return json_response({'message': 'No se encontró el proyecto para el estudiante pasado para el ciclo académico'}, status=400)
+            return json_response({'message': 'No se encontró el proyecto para el estudiante pasado para el '
+                                             'ciclo académico'}, status=400)
+
+        review = await self.fetch_review(project['id'], user['id'], review_id, is_published=False, is_empty=True)
+
+        if not review:
+            return json_response({'message': 'No se encontró la observación seleccionada'}, status=400)
 
         data = await self.request.post()
 
-        if not('review' in data and len(data) == 1):
+        if not check_form_data(data, 'body'):
             return json_response({'message': 'Data malformada...'}, status=400)
 
         errors = await self.validate(data)
@@ -248,20 +317,69 @@ class RegisterReview(Project):
         if errors:
             return json_response({'message': errors[0]}, status=400)
 
-        return json_response({'message': 'Se registró la tesis exitosamente'})
+        await self.update(review['id'], data['body'])
+
+        return json_response({'message': 'Se registró la observación de tesis exitosamente'})
 
     async def validate(self, data: dict):
         return await validator.validate([
-            ['Observación', data['review'], 'len:16,4096']
+            ['Observación', data['body'], 'len:16,4096']
         ], self.request.app.db)
+
+    async def update(self, review: int, body: str):
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute('''
+                UPDATE observacion_proyecto
+                SET contenido = $1 AND
+                    finalizado = true
+                WHERE id = $2
+            ''', body, review)
+
+
+class ProjectOverview(Project):
+    @view('projects.overview')
+    async def get(self, user: dict):
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+
+        return {'project': project,
+                'members': members,
+                'is_member': await self.is_member(user, members),
+                'location': 'overview'}
+
+
+class ProjectReviews(Project):
+    @view('projects.reviews')
+    async def get(self, user: dict):
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+
+        return {'project': project,
+                'members': members,
+                'is_member': await self.is_member(user, members),
+                'location': 'reviews'}
+
+
+class ProjectFiles(Project):
+    @view('projects.files')
+    async def get(self, user: dict):
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+
+        return {'project': project,
+                'members': members,
+                'is_member': await self.is_member(user, members),
+                'location': 'files'}
 
 
 routes = {
     'projects': {
         'create-new': CreateProject,
         '{project:(?:[1-9][0-9]*|my-project)}': {
-            'overview': OverviewProject,
-            'review': RegisterReview
-        },
+            'overview': ProjectOverview,
+            'reviews': ProjectReviews,
+            'files': ProjectFiles,
+            'review-{review:[1-9][0-9]*}': RegisterReview
+        }
     }
 }

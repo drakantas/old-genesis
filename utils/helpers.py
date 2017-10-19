@@ -157,5 +157,12 @@ def school_term_to_str(school_term: dict) -> str:
                                 month2=parse_data_key(school_term['fecha_fin'].month, 'months'))
 
 
+def check_form_data(data: dict, *args) -> bool:
+    if not(all([e for e in args if e in data]) and len(data) == len(args)):
+        return False
+
+    return True
+
+
 class PermissionNotFound(Exception):
     pass

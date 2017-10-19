@@ -18,9 +18,10 @@ depends_on = None
 
 def upgrade():
     op.create_table('observacion_proyecto',
-                    sa.Column('usuario_id', sa.BigInteger, primary_key=True),
-                    sa.Column('proyecto_id', sa.Integer, primary_key=True),
-                    sa.Column('contenido', sa.Text, nullable=False),
+                    sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+                    sa.Column('usuario_id', sa.BigInteger, nullable=False),
+                    sa.Column('proyecto_id', sa.Integer, nullable=False),
+                    sa.Column('contenido', sa.Text, nullable=True),
                     sa.Column('finalizado', sa.Boolean, nullable=False, server_default=sa.false()))
 
     op.create_foreign_key('usuario_id_fk',
