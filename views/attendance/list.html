@@ -41,6 +41,11 @@
             </div>
         </div>
         <hr class="divider">
+        {% if students|length == 0 %}
+        <div class="alert alert-warning" role="alert">
+            No hay estudiantes registrados para este ciclo académico aún.
+        </div>
+        {% else %}
         <table class="table table-striped">
             <thead>
                 <tr>
@@ -82,5 +87,6 @@
                 {% endfor %}
             </tbody>
         </table>
+        {% endif %}
     </div>
 {% endblock %}

@@ -44,6 +44,7 @@
                     <th>Cantidad de observaciones</th>
                     <th>Fecha de presentacion</th>
                     <th>Jurado</th>
+                    <th>Opciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -65,6 +66,11 @@
                     {{ panel_member.nombres }} {{ panel_member.apellidos }}<br />
                     {% endfor %}
                     {% endif %}
+                </td>
+                <td>
+                    <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
+                    <a href="/projects/{{ project.id }}/assign-review" class="btn table-btn" data-toggle="tooltip" title="Asignar a observación"><span class="glyphicon glyphicon-eye-open"></span></a>
+                    <a href="/projects/{{ project.id }}/assign-presentation" class="btn table-btn" data-toggle="tooltip" title="Asignar a sustentación"><span class="glyphicon glyphicon-calendar"></span></a>
                 </td>
             </tr>
             {% endfor %}

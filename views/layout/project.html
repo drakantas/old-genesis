@@ -2,7 +2,7 @@
 
 {% block content %}
     {% if not project.activo %}
-    <div class="content_wrapper padded" style="background-color:transparent;box-shadow:none;"><div class="alert alert-info" role="alert">
+    <div class="content_wrapper" style="background-color:transparent;box-shadow:none;"><div class="alert alert-info" role="alert">
         Este proyecto es de hace uno o más ciclos.
     </div></div>
     {% endif %}
@@ -47,6 +47,9 @@
             </li>
             <li {% if location == 'reviews' %}class="active"{% endif %}>
                 <a href="/projects/{% if user.permissions.crear_proyecto %}my-project{% else %}{{ project.id }}{% endif %}/reviews">Observaciones</a>
+            </li>
+            <li {% if location == 'presentation' %}class="active"{% endif %}>
+                <a href="/projects/{% if user.permissions.crear_proyecto %}my-project{% else %}{{ project.id }}{% endif %}/presentation">Sustentación</a>
             </li>
         </ul>
     </div>

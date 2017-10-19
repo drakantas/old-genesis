@@ -79,7 +79,11 @@
             <ul aria-expanded="true">
                 <li>
                     {% if user.permissions.crear_proyecto %}
+                    {% if not user.has_project %}
                     <a href="/projects/create-new"><span class="glyphicon glyphicon-menu-right"></span> Crear proyecto de tésis</a>
+                    {% else %}
+                    <a href="/projects/my-project/overview"><span class="glyphicon glyphicon-menu-right"></span> Mi proyecto de tésis</a>
+                    {% endif %}
                     {% endif %}
                     {% if user.permissions.ver_listado_proyectos %}
                     <a href="/projects/list"><span class="glyphicon glyphicon-menu-right"></span> Reporte de proyectos del ciclo</a>
