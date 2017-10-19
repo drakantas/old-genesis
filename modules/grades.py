@@ -49,8 +49,7 @@ class ClassGrades(View):
                 # ciclo académico registrado, por lo tanto no hay data a mostrar.
                 return {'message': 'No se encontró un ciclo académico registrado para este preciso momento. '
                                    'Puedes seleccionar un ciclo académico previo en el selector superior.',
-                        'school_terms': await self.get_school_terms(user),
-                        'current_school_term_id': school_term['id']}
+                        'school_terms': await self.get_school_terms(user)}
 
         students = await self.fetch_students(school_term['id'])
 
