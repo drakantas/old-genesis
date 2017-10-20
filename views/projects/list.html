@@ -18,9 +18,9 @@
             </div>
             <div class="col-sm-6 text-right">
                 {% if school_term_has_not_begun is defined %}
-                <a href="#" class="btn btn-default disabled"><span class="glyphicon glyphicon-download-alt"></span> Exportar como .PDF</a>
+                <a href="javascript:window.print();" class="btn btn-default disabled"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
                 {% else %}
-                <a href="#" class="btn btn-default"><span class="glyphicon glyphicon-download-alt"></span> Exportar como .PDF</a>
+                <a href="javascript:window.print();" class="btn btn-default"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
                 {% endif %}
             </div>
         </div>
