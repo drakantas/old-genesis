@@ -1,5 +1,6 @@
 from typing import Generator
 from aiohttp.web import View
+from datetime import datetime
 from asyncpg.pool import PoolConnectionHolder
 
 from utils.map import map_users
@@ -23,8 +24,13 @@ class AuthorizeStudents(View):
         data = list(self.checked_students(data, students))
 
         try:
+            school_term = await self.get_school_term(user['escuela'])
+
+            if not school_term:
+                raise ValueError
+
             if data:
-                await self.authorize_students(((s,) for s in data), self.request.app.db)
+                await self.authorize_students([(s, school_term) for s in data], self.request.app.db)
             else:
                 raise ValueError
         except ValueError:
@@ -45,17 +51,34 @@ class AuthorizeStudents(View):
             if 'student_{}'.format(student['id']) in data:
                 yield student['id']
 
+    async def get_school_term(self, school: int):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT id
+                FROM ciclo_academico
+                WHERE escuela = $2 AND
+                      fecha_comienzo <= $1 AND
+                      fecha_fin >= $1
+                LIMIT 1
+            ''')).fetchval(datetime.utcnow(), school)
+
     @staticmethod
-    async def authorize_students(data: Generator, dbi: PoolConnectionHolder):
-        query = '''
+    async def authorize_students(data: list, dbi: PoolConnectionHolder):
+        query = ('''
             UPDATE usuario
-            SET autorizado=TRUE
-            WHERE id=$1
-        '''
+            SET autorizado = true
+            WHERE id = $1;
+        ''', '''
+            INSERT INTO matricula (estudiante_id, ciclo_acad_id)
+            VALUES ($1, $2);
+        ''')
 
         async with dbi.acquire() as connection:
             async with connection.transaction():
-                await connection.executemany(query, data)
+                for user in data:
+                    await connection.execute(query[0], user[0])
+                    await connection.execute(query[1], *user)
+
 
     @staticmethod
     async def _fetch_students(school: int, dbi: PoolConnectionHolder):
