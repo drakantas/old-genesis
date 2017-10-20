@@ -4,7 +4,7 @@ from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, json_response, HTTPUnauthorized
 
 from utils.map import map_users
-from utils.helpers import view, flatten, pass_user, permission_required, school_term_to_str
+from utils.helpers import view, flatten, pass_user, permission_required, school_term_to_str, schedule_to_str
 
 
 class StudentsList(View):
@@ -398,6 +398,121 @@ class RegisterAttendance(View):
             return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), teacher)
 
 
+class DetailedReport(View):
+    @view('attendance.detailed_report')
+    @permission_required('ver_listado_alumnos')
+    async def get(self, user: dict):
+        students = await self.get_students(user['escuela'])
+
+        if students:
+            students = flatten(students, {})
+            school_term = students[0]['ciclo_acad_id']
+            schedules = flatten(await self.fetch_schedules(school_term), {})
+
+            for i, schedule in enumerate(schedules):
+                schedules[i]['str'] = schedule_to_str(schedule['dia_clase'],
+                                                      schedule['hora_comienzo'],
+                                                      schedule['hora_fin'])
+
+            del school_term
+
+            for i, student in enumerate(students):
+                students[i]['attendance'] = []
+                students[i]['total_attendances'] = 0
+                students[i]['total_non_attendances'] = 0
+                for schedule in schedules:
+                    attendances = await self.fetch_non_attendances(student['id'], schedule['id'])
+                    non_attendances = attendances['inasistencias_porcentaje'] or 0
+                    _non_attendances_amount = attendances['inasistencias'] or 0
+                    _total_attendances = attendances['total_asistencias'] or 0
+
+                    students[i]['total_non_attendances'] += _non_attendances_amount
+                    students[i]['total_attendances'] += _total_attendances
+
+                    students[i]['attendance'].append({
+                        'attendances': 100 - non_attendances,
+                        'non_attendances': non_attendances
+                    })
+
+                    del _total_attendances, _non_attendances_amount, non_attendances, attendances
+
+            return {'students': students,
+                    'schedules': schedules}
+
+        return {'students': []}
+
+    @staticmethod
+    async def fetch_attendance_for_schedule(student: int, schedule: int, dbi: PoolConnectionHolder):
+        query = '''
+            SELECT horario_id, fecha_registro, asistio
+            FROM asistencia
+            WHERE alumno_id = $1 AND
+                  horario_id = $2
+        '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(student, schedule)
+
+    async def get_students(self, school: int):
+        query = '''
+            SELECT id, CASE WHEN tipo_documento = 0 THEN 'DNI' ELSE 'Carné de extranjería' END as tipo_documento,
+                   nombres, apellidos, matricula.ciclo_acad_id
+            FROM usuario
+            INNER JOIN matricula
+                    ON matricula.ciclo_acad_id = (SELECT id
+                                                  FROM ciclo_academico
+                                                  WHERE escuela = $1 AND
+                                                        $2 >= fecha_comienzo AND
+                                                        $2 <= fecha_fin LIMIT 1) AND
+                       matricula.estudiante_id = usuario.id
+        '''
+
+        async with self.request.app.db.acquire() as connection:
+            stmt = await connection.prepare(query)
+            return await stmt.fetch(school, datetime.utcnow())
+
+    async def fetch_schedules(self, school_term: int):
+        query = '''
+            SELECT horario_profesor.id, profesor_id, nombres as profesor_nombres,
+                   apellidos as profesor_apellidos, dia_clase, hora_comienzo,
+                   hora_fin
+            FROM horario_profesor
+            LEFT JOIN usuario
+                   ON usuario.id = profesor_id
+            WHERE ciclo_id = $1
+            ORDER BY usuario.nombres ASC, usuario.apellidos ASC, dia_clase ASC, hora_comienzo ASC
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school_term)
+
+    async def fetch_non_attendances(self, student: int, schedule: int):
+        query = '''
+            WITH total_asistencias AS (
+                SELECT COUNT(true) as cant_asistencias
+                FROM asistencia
+                WHERE alumno_id = $1 AND
+                      horario_id = $2
+                LIMIT 1
+            ), inasistencias AS (
+                SELECT COUNT(true) as cant_inasistencias
+                FROM asistencia
+                WHERE alumno_id = $1 AND
+                      horario_id = $2 AND
+                      asistio = FALSE
+                HAVING COUNT(*) >= 1
+                LIMIT 1
+            )
+            SELECT CAST(
+                (SELECT CAST(cant_inasistencias AS FLOAT) FROM inasistencias) /
+                COALESCE((SELECT CAST(cant_asistencias AS FLOAT) FROM total_asistencias), 1) * 100
+            AS INT) as inasistencias_porcentaje,
+                  (SELECT cant_inasistencias FROM inasistencias) as inasistencias,
+                  (SELECT cant_asistencias FROM total_asistencias) as total_asistencias
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(student, schedule)
+
+
 routes = {
     'students': {
         'list': StudentsList,
@@ -406,6 +521,7 @@ routes = {
     'attendance': {
         'register': RegisterAttendance,
         'student-report/{student_id:(?:[1-9][0-9]*|my-own)}': ReadAttendanceReport,
-        'student-report/school-term-{school_term_id:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadAttendanceReport
+        'student-report/school-term-{school_term_id:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadAttendanceReport,
+        'detailed-report': DetailedReport
     }
 }

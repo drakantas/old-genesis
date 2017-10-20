@@ -164,5 +164,38 @@ def check_form_data(data: dict, *args) -> bool:
     return True
 
 
+def schedule_to_str(day: int, start_time: int, end_time: int) -> str:
+    _day = parse_data_key(day, 'days')
+
+    return '{day} {start_time} - {end_time}'.format(day=_day,
+                                                    start_time=_time_to_str(start_time),
+                                                    end_time=_time_to_str(end_time))
+
+
+def _time_to_str(time: int) -> str:
+    if time >= 1200 and time != 2400:
+        period = 'PM'
+    else:
+        period = 'AM'
+
+    if period == 'PM':
+        _time = time - 1200
+    else:
+        _time = time
+
+    hours = str(int(_time / 100))
+    minutes = _time % 100
+
+    if minutes == 0:
+        minutes = '00'
+    else:
+        minutes = str(minutes)
+
+    if len(hours) == 1:
+        hours = '0' + hours
+
+    return '{hours}:{minutes} {period}'.format(hours=hours, minutes=minutes, period=period)
+
+
 class PermissionNotFound(Exception):
     pass

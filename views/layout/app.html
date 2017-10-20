@@ -52,7 +52,7 @@
             </ul>
         </li>
         {% endif %}
-        {% if user.permissions.ver_reportes_personales or user.permissions.registrar_asistencia or user.permissions.gestionar_asistencias %}
+        {% if user.permissions.ver_reportes_personales or user.permissions.registrar_asistencia or user.permissions.gestionar_asistencias or user.permissions.ver_listado_alumnos %}
         <li>
             <a href="#" class="has-arrow">
                 <span class="glyphicon glyphicon-calendar"></span> Asistencias
@@ -71,6 +71,11 @@
                 {% if user.permissions.gestionar_asistencias %}
                 <li>
                     <a href="/school-term/create"><span class="glyphicon glyphicon-menu-right"></span> Crear ciclo académico</a>
+                </li>
+                {% endif %}
+                {% if user.permissions.ver_listado_alumnos %}
+                <li>
+                    <a href="/attendance/detailed-report"><span class="glyphicon glyphicon-menu-right"></span> Reporte detallado de asistencias</a>
                 </li>
                 {% endif %}
             </ul>

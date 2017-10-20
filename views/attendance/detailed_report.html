@@ -1,0 +1,85 @@
+{% extends "layout/app.html" %}
+
+{% block breadcrumbs %}
+<a href="/">Inicio</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a class="current_page">Asistencias</a>
+{% endblock %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <h2 style="margin:0;">Reporte detallado de asistencias</h2>
+        <hr class="divider" />
+        {% if not students %}
+        <div class="alert alert-warning">
+            No hay estudiantes registrados para este ciclo académico
+        </div>
+        {% else %}
+        <h4>Horarios</h4>
+        <hr class="divider" />
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Profesor</th>
+                    <th>Fecha y hora de clases</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for schedule in schedules %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ schedule.profesor_nombres }} {{ schedule.profesor_apellidos }}</td>
+                    <td>{{ schedule.str }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <h4>Estudiantes</h4>
+        <hr class="divider" />
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Documento de identidad</th>
+                    <th>Apellidos y nombres</th>
+                    {% for _ in schedules %}
+                    <th>Horario {{ loop.index }}</th>
+                    {% endfor %}
+                    <th>Asistencia total</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr>
+                    <td width="10%"><abbr data-toggle="tooltip" title="{{ student.tipo_documento }}" class="student_id">{{ student.id }}</abbr></td>
+                    <td width="20%"><a href="/profile/{{ student.id }}" data-toggle="tooltip" title="Ver perfíl">{{ student.apellidos }} {{ student.nombres }}</a></td>
+                    {% for attendance in student.attendance %}
+                    <td>
+                        <div class="btn-group btn-group-xs" role="group">
+                            <span class="btn btn-success" role="button" data-toggle="tooltip" title="Asistencias">{{ attendance.attendances }}%</span><span class="btn btn-danger" data-toggle="tooltip" title="Inasistencias">{{ attendance.non_attendances }}%</span>
+                        </div>
+                    </td>
+                    {% endfor %}
+                    <td>
+                        <div class="btn-group btn-group-xs" role="group">
+                            <span class="btn btn-success" role="button" data-toggle="tooltip" title="Total de asistencias">{{ (100 - (student.total_non_attendances / (student.total_attendances or 1)) * 100)|int }}%</span><span class="btn btn-danger" role="button" data-toggle="tooltip" title="Total de inasistencias">{{ ((student.total_non_attendances / (student.total_attendances or 1)) * 100)|int }}%</span>
+                        </div>
+                    </td>
+                    <td width="10%">
+                        {% if ((student.total_non_attendances / (student.total_attendances or 1)) * 100)|int >= 20 %}
+                            DESAPROBADO
+                        {% else %}
+                            APROBADO
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+    <style>
+        table tbody > tr > td .btn-group span.btn {
+            border: none;
+        }
+    </style>
+{% endblock %}
