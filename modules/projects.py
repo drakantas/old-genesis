@@ -100,6 +100,34 @@ class Project(View):
 
         return reviews
 
+    async def fetch_decision_panel(self, school: int):
+        query = '''
+            SELECT usuario.id, nombres, apellidos, rol_usuario.desc as rol
+            FROM usuario
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE usuario.rol_id = 5 AND
+                  usuario.deshabilitado = false AND
+                  usuario.autorizado = true AND
+                  usuario.escuela = $1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school)
+
+    async def fetch_reviewers(self, school: int):
+        query = '''
+            SELECT usuario.id, nombres, apellidos, rol_usuario.desc as rol
+            FROM usuario
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE usuario.deshabilitado = false AND
+                  usuario.autorizado = true AND
+                  usuario.escuela = $1 AND
+                  rol_usuario.revisar_proyectos = true
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school)
+
     async def fetch_pending_reviews(self, user: int, school: int):
         query = '''
             SELECT observacion_proyecto.proyecto_id, proyecto.titulo as proyecto_titulo, 
@@ -603,6 +631,31 @@ class ProjectFiles(Project):
                 'location': 'files'}
 
 
+class GetDecisionPanel(Project):
+    @pass_user
+    @permission_required('gestionar_proyectos')
+    async def get(self, user: dict):
+        decision_panel = await self.fetch_decision_panel(user['escuela'])
+
+        if not decision_panel:
+            return json_response({'message': 'No se ha encontrado ningún jurado registrado.'}, status=412)
+
+        return json_response(flatten(decision_panel, {}))
+
+
+class GetReviewers(Project):
+    @pass_user
+    @permission_required('gestionar_proyectos')
+    async def get(self, user: dict):
+        reviewers = await self.fetch_reviewers(user['escuela'])
+
+        if not reviewers:
+            return json_response({'message': 'No se ha encontrado personal con permisos para realizar observaciones.'},
+                                 status=412)
+
+        return json_response(flatten(reviewers, {}))
+
+
 routes = {
     'projects': {
         'create-new': CreateProject,
@@ -615,5 +668,7 @@ routes = {
         'pending-reviews': PendingReviewsList,
         'list': ProjectsList,
         'list/school-term-{school_term:[1-9][0-9]*}': ProjectsList
-    }
+    },
+    'reviewers': GetReviewers,
+    'decision-panel': GetDecisionPanel
 }

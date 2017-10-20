@@ -49,12 +49,11 @@
             </thead>
             <tbody>
             {% for project in projects %}
+            {% if project.members|length == 1 %}
             <tr>
                 <td>{{ project.titulo }}</td>
                 <td>
-                    {% for member in project.members %}
-                    {{ member.nombres }} {{ member.apellidos }}<br />
-                    {% endfor %}
+                    {{ project.members[0].nombres }} {{ project.members[0].apellidos }}
                 </td>
                 <td>{{ project.reviewed }}</td>
                 <td>{{ project.presentation_date or 'Aún no asignado' }}</td>
@@ -67,12 +66,37 @@
                     {% endfor %}
                     {% endif %}
                 </td>
-                <td>
+                <td width="15%">
                     <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
                     <a href="/projects/{{ project.id }}/assign-review" class="btn table-btn" data-toggle="tooltip" title="Asignar a observación"><span class="glyphicon glyphicon-eye-open"></span></a>
                     <a href="/projects/{{ project.id }}/assign-presentation" class="btn table-btn" data-toggle="tooltip" title="Asignar a sustentación"><span class="glyphicon glyphicon-calendar"></span></a>
                 </td>
             </tr>
+            {% else %}
+            <tr>
+                <td rowspan="2">{{ project.titulo }}</td>
+                <td>{{ project.members[0].nombres }} {{ project.members[0].apellidos }}</td>
+                <td rowspan="2">{{ project.reviewed }}</td>
+                <td rowspan="2">{{ project.presentation_date or 'Aún no asignado' }}</td>
+                <td rowspan="2">
+                    {% if project.presentation_date is none %}
+                    No se asignó un jurado aún
+                    {% else %}
+                    {% for panel_member in decision_panel %}
+                    {{ panel_member.nombres }} {{ panel_member.apellidos }}<br />
+                    {% endfor %}
+                    {% endif %}
+                </td>
+                <td rowspan="2" width="15%">
+                    <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
+                    <a href="/projects/{{ project.id }}/assign-review" class="btn table-btn" data-toggle="tooltip" title="Asignar a observación"><span class="glyphicon glyphicon-eye-open"></span></a>
+                    <a href="/projects/{{ project.id }}/assign-presentation" class="btn table-btn" data-toggle="tooltip" title="Asignar a sustentación"><span class="glyphicon glyphicon-calendar"></span></a>
+                </td>
+            </tr>
+            <tr>
+                <td>{{ project.members[1].nombres }} {{ project.members[1].apellidos }}</td>
+            </tr>
+            {% endif %}
             {% endfor %}
             </tbody>
         </table>
