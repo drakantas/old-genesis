@@ -1,5 +1,9 @@
 {% extends "layout/app.html" %}
 
+{% block breadcrumbs %}
+<a href="/">Inicio</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a class="current_page">Proyectos</a>
+{% endblock %}
+
 {% block content %}
     <div class="content_wrapper padded">
         <h2 style="margin-top:0;">Listado de proyectos</h2>
@@ -70,9 +74,11 @@
                 </td>
                 <td width="15%">
                     <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
+                    {% if user.permissions.gestionar_proyectos %}
                     <a href="/projects/{{ project.id }}/assign-review" class="btn table-btn assign_reviewer" data-toggle="tooltip" title="Asignar a observación"><span class="glyphicon glyphicon-eye-open"></span></a>
                     {% if project.presentation_date is none %}
                     <a href="/projects/{{ project.id }}/assign-presentation" class="btn table-btn assign_presentation_date" data-toggle="tooltip" title="Asignar a sustentación"><span class="glyphicon glyphicon-calendar"></span></a>
+                    {% endif %}
                     {% endif %}
                 </td>
             </tr>
@@ -93,8 +99,12 @@
                 </td>
                 <td rowspan="2" width="15%">
                     <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
+                    {% if user.permissions.gestionar_proyectos %}
                     <a href="/projects/{{ project.id }}/assign-review" class="btn table-btn assign_reviewer" data-toggle="tooltip" title="Asignar a observación"><span class="glyphicon glyphicon-eye-open"></span></a>
+                    {% if project.presentation_date is none %}
                     <a href="/projects/{{ project.id }}/assign-presentation" class="btn table-btn assign_presentation_date" data-toggle="tooltip" title="Asignar a sustentación"><span class="glyphicon glyphicon-calendar"></span></a>
+                    {% endif %}
+                    {% endif %}
                 </td>
             </tr>
             <tr>

@@ -305,6 +305,7 @@ class Project(View):
 
 class ProjectsList(View):
     @view('projects.list')
+    @permission_required('ver_listado_proyectos')
     async def get(self, user: dict):
         if 'school_term' in self.request.match_info:
             school_term = await self.fetch_school_term(user['escuela'], int(self.request.match_info['school_term']))
