@@ -20,6 +20,7 @@
                     </div>
                 {% endif %}
             {% endif %}
+            {% if students %}
             <table class="table table-striped">
                 <thead >
                     <tr>
@@ -53,6 +54,11 @@
                 <button class="btn btn-primary">Autorizar</button>
                 <button class="btn btn-default">Cancelar</button>
             </div>
+            {% else %}
+            <div class="alert alert-warning">
+                No hay estudiantes por autorizar.
+            </div>
+            {% endif %}
         </form>
     </div>
 {% endblock %}
