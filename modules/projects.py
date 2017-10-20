@@ -8,6 +8,9 @@ from utils.validator import validator
 from utils.helpers import view, permission_required, flatten, school_term_to_str, pass_user, check_form_data
 
 
+_datetime = '%m/%d/%Y %I:%M %p'
+
+
 class Project(View):
     async def check_permissions(self, user: dict):
         if user['permissions']['crear_proyecto'] and self.request.match_info['project'] != 'my-project':
@@ -656,6 +659,166 @@ class GetReviewers(Project):
         return json_response(flatten(reviewers, {}))
 
 
+class AssignReviewer(Project):
+    @pass_user
+    @permission_required('gestionar_proyectos')
+    async def post(self, user: dict):
+        try:
+            if self.request.match_info['project'] == 'my-project':
+                raise HTTPNotFound
+
+            project = await self.get_project(user)
+        except HTTPUnauthorized:
+            return json_response({'message': 'No tienes los permisos suficientes para ver esta página.'}, status=401)
+        except HTTPNotFound:
+            return json_response({'message': 'No se encontró el proyecto para este ciclo académico.'}, status=404)
+
+        data = await self.request.post()
+        if not check_form_data(data, 'reviewers'):
+            return json_response({'message': 'Debes seleccionar por lo menos un revisor.'}, status=400)
+
+        reviewers = [v for k, v in data.items() if k == 'reviewers']
+
+        errors = await self.validate(reviewers, user['escuela'])
+
+        if errors:
+            return json_response({'message': errors}, status=400)
+
+        await self.create(project['id'], reviewers)
+
+        return json_response({'message': 'Se asignó las observaciones a los revisores, estos serán notificados'
+                                         ' para que las realicen.'})
+
+    async def create(self, project: int, reviewers: list):
+        async with self.request.app.db.acquire() as connection:
+            async with connection.transaction():
+                for reviewer in reviewers:
+                    await connection.execute('''
+                        INSERT INTO observacion_proyecto (proyecto_id, usuario_id, finalizado)
+                        VALUES ($1, $2, $3)
+                    ''', project, int(reviewer), False)
+
+    async def validate(self, reviewers: list, school: int):
+        def _get_validation_rules(reviewers_, school_):
+            for r in reviewers_:
+                yield ['Revisor', r, 'digits|custom', self._validate_reviewer, school]
+
+        return await validator.validate([
+            *list(_get_validation_rules(reviewers, school))
+        ], self.request.app.db)
+
+    @staticmethod
+    async def _validate_reviewer(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder, school: int):
+        query = '''
+            SELECT true
+            FROM usuario
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE usuario.deshabilitado = false AND
+                  usuario.autorizado = true AND
+                  usuario.escuela = $2 AND
+                  rol_usuario.revisar_proyectos = true AND
+                  usuario.id = $1
+            LIMIT 1
+        '''
+        async with dbi.acquire() as connection:
+            if not await (await connection.prepare(query)).fetchval(int(value), school):
+                return '{}:{} no existe...'.format(name, value)
+
+
+class AssignPresentationDate(Project):
+    @pass_user
+    @permission_required('gestionar_proyectos')
+    async def post(self, user: dict):
+        try:
+            if self.request.match_info['project'] == 'my-project':
+                raise HTTPNotFound
+
+            project = await self.get_project(user)
+        except HTTPUnauthorized:
+            return json_response({'message': 'No tienes los permisos suficientes para ver esta página.'}, status=401)
+        except HTTPNotFound:
+            return json_response({'message': 'No se encontró el proyecto para este ciclo académico.'}, status=404)
+
+        if await self.check_presentation_exists(project['id']):
+            return json_response({'message': 'Este proyecto ya tiene una fecha de sustentación programada'}, status=400)
+
+        data = await self.request.post()
+
+        if not check_form_data(data, 'decision_panel', 'presentation_date'):
+            return json_response({'message': 'Debes de seleccionar por lo menos un jurado e ingresar una'
+                                             ' fecha de presentación.'}, status=400)
+
+        decision_panel = [v for k, v in data.items() if k == 'decision_panel']
+
+        errors = await self.validate(data['presentation_date'], decision_panel, user['escuela'])
+
+        if errors:
+            return json_response({'message': errors}, status=400)
+
+        await self.create(project['id'], datetime.strptime(data['presentation_date'], _datetime), decision_panel)
+
+        return json_response({'message': 'Se asignó la fecha de presentación con éxito.'})
+
+    async def validate(self, date_: str, decision_panel: list, school: int):
+        def _get_validation_rules(decision_panel_, school_):
+            for dp in decision_panel_:
+                yield ['Jurado', dp, 'digits|custom', self._validate_decision_panel, school_]
+
+        return await validator.validate([
+            ['Fecha de sustentación', date_, 'custom', self._validate_datetime],
+            *list(_get_validation_rules(decision_panel, school))
+        ], self.request.app.db)
+
+    async def create(self, project: int, date_: datetime, decision_panel: list):
+        async with self.request.app.db.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute('''
+                    INSERT INTO presentacion_proyecto (proyecto_id, fecha)
+                    VALUES ($1, $2)
+                ''', project, date_)
+
+                for dp in decision_panel:
+                    await connection.execute('''
+                        INSERT INTO jurado_presentacion (presentacion_id, jurado_id)
+                        VALUES ($1, $2)
+                    ''', project, int(dp))
+
+    async def check_presentation_exists(self, project: int):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT true
+                FROM presentacion_proyecto
+                WHERE proyecto_id = $1
+                LIMIT 1
+            ''')).fetchval(project) or False
+
+    @staticmethod
+    async def _validate_decision_panel(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder, school: int):
+        query = '''
+            SELECT true
+            FROM usuario
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
+            WHERE usuario.rol_id = 5 AND
+                  usuario.deshabilitado = false AND
+                  usuario.autorizado = true AND
+                  usuario.escuela = $2 AND
+                  usuario.id = $1
+            LIMIT 1
+        '''
+        async with dbi.acquire() as connection:
+            if not await (await connection.prepare(query)).fetchval(int(value), school):
+                return '{}:{} no existe...'.format(name, value)
+
+    @staticmethod
+    async def _validate_datetime(name: str, value: str, *args):
+        try:
+            datetime.strptime(value, _datetime)
+        except ValueError:
+            return '{} debe ser un formato de fecha adecuado'.format(name)
+
+
 routes = {
     'projects': {
         'create-new': CreateProject,
@@ -663,7 +826,9 @@ routes = {
             'overview': ProjectOverview,
             'reviews': ProjectReviews,
             'files': ProjectFiles,
-            'review/{review:[1-9][0-9]*}': SingleReview
+            'review/{review:[1-9][0-9]*}': SingleReview,
+            'assign-review': AssignReviewer,
+            'assign-presentation': AssignPresentationDate
         },
         'pending-reviews': PendingReviewsList,
         'list': ProjectsList,

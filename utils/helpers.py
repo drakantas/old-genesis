@@ -158,7 +158,7 @@ def school_term_to_str(school_term: dict) -> str:
 
 
 def check_form_data(data: dict, *args) -> bool:
-    if not(all([e for e in args if e in data]) and len(data) == len(args)):
+    if not all([e for e in args if e in data] or [False]):
         return False
 
     return True

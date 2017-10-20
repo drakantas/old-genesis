@@ -8,6 +8,9 @@ class Projects
         this.registerReview = $('#register_review');
         this.registerReviewEditor = 'review_body_editor';
         this.clickedReview = null;
+        this.reviewers = null;
+        this.decisionPanel = null;
+        this.assignStuffRoute = null;
 
         this.editorConfig = {
             toolbar: [
@@ -83,7 +86,79 @@ class Projects
                 alert_wrapper.html($this.printError('Acabas de registrar esta observación, ya no puede ser modificada.', 'warning'));
             }
         });
+
+        $('.assign_reviewer').on('click', (e) => {
+            e.preventDefault();
+
+            $this.assignStuffRoute = $(e.currentTarget).attr('href');
+
+            $this.fetchReviewers((reviewers) => {
+                const modalBody = $($('#assign_reviewer').find('.modal-body')[0]);
+                modalBody.html($this.assignReviewerContent(reviewers));
+                $(modalBody.find('#_reviewers')[0]).selectpicker();
+                $('#assign_reviewer').modal();
+            });
+        });
+
+        $('.assign_presentation_date').on('click', (e) => {
+            e.preventDefault();
+
+            $this.assignStuffRoute = $(e.currentTarget).attr('href');
+
+            $this.fetchDecisionPanel((decision_panel) => {
+                const modalBody = $($('#assign_presentation_date').find('.modal-body')[0]);
+                modalBody.html($this.assignPresentationDateContent(decision_panel));
+                $(modalBody.find('#_decision_panel')[0]).selectpicker();
+                $('#presentation_datetimepicker').datetimepicker();
+                $('#assign_presentation_date').modal();
+            });
+        });
+
+        $(document).on('click', '.submit-btn', (e) => {
+            const modal_body = $(e.currentTarget).parent().parent().parent();
+            const alert_wrapper = $(modal_body.find('.alert_wrapper')[0]);
+
+            if ($this.assignStuffRoute === null)
+            {
+                alert_wrapper.html($this.printError('Algo ha sucedido... Intentalo otra vez.', 'warning'));
+                return;
+            }
+
+            const data = new FormData(modal_body.find('form')[0]);
+            axios.post($this.assignStuffRoute, data, {'Content-Type': 'application/x-www-form-urlencoded'})
+                 .then((response) => {
+                    alert_wrapper.html($this.printError(response.data.message, 'success'));
+                 })
+                 .catch((error) => {
+                    const response = error.response;
+
+                    if (!(response.status === 400 || response.status === 401 || response.status === 404)) {
+                        console.log(error);
+                        return;
+                    }
+                    if (!Array.isArray(response.data.message))
+                    {
+                        alert_wrapper.html($this.printError(response.data.message));
+                    }
+                    else
+                    {
+                        let errors = '<ul>';
+                        for (const _e of response.data.message)
+                        {
+                            errors = errors + `<li>${_e}</li>`;
+                        }
+                        errors = errors + '</ul>';
+                        alert_wrapper.html($this.printError(errors));
+                    }
+                 });
+        });
+
+        $('#assign_reviewer, #assign_presentation_date').on('hidden.bs.modal', (e) => {
+            $($(e.currentTarget).find('.modal-body')[0]).html('');
+        });
     }
+
+
 
     handlePostReview($this, response)
     {
@@ -191,6 +266,109 @@ class Projects
     printError(message, alert_type = 'danger')
     {
         return `<div class="alert alert-${alert_type}">${message}</div>`;
+    }
+
+    fetchReviewers(callback)
+    {
+        if (this.reviewers !== null)
+        {
+            return callback(this.reviewers);
+        }
+
+        let $this = this;
+
+        axios.get('/reviewers')
+             .then(function (response) {
+                $this.reviewers = response.data;
+                return callback($this.reviewers);
+             })
+             .catch(function (error) {
+                console.log(error);
+             });
+    }
+
+    fetchDecisionPanel(callback)
+    {
+        if (this.decisionPanel !== null)
+        {
+            return callback(this.decisionPanel);
+        }
+
+        let $this = this;
+
+        axios.get('/decision-panel')
+             .then(function (response) {
+                $this.decisionPanel = response.data;
+                return callback($this.decisionPanel);
+             })
+             .catch(function (error) {
+                console.log(error);
+             });
+    }
+
+    assignReviewerContent(reviewers)
+    {
+        let _reviewers = '';
+
+        if (reviewers.length > 0)
+        {
+            for (const reviewer of reviewers)
+            {
+                _reviewers = _reviewers + `<option value="${reviewer.id}">${reviewer.nombres} ${reviewer.apellidos} - ${reviewer.rol}</option>`;
+            }
+        }
+
+        return `
+            <div class="alert_wrapper"></div>
+            <form>
+                <div class="form-group">
+                    <label for="reviewers">Asignar a</label>
+                    <select class="selectpicker" name="reviewers" id="_reviewers" data-live-search="true" data-width="100%" multiple>
+                        ${_reviewers}
+                    </select>
+                </div>
+                <div class="text-right">
+                    <button type="button" class="btn btn-success submit-btn">Asignar</button>
+                </div>
+            </form>
+        `;
+    }
+
+    assignPresentationDateContent(decisionPanel)
+    {
+        let _decisionPanel = '';
+
+        if (decisionPanel.length > 0)
+        {
+            for (const dude of decisionPanel)
+            {
+                _decisionPanel = _decisionPanel + `<option value="${dude.id}">${dude.nombres} ${dude.apellidos} - ${dude.rol}</option>`;
+            }
+        }
+
+        return `
+            <div class="alert_wrapper"></div>
+            <form>
+                <div class="form-group">
+                    <label for="_decision_panel">Jurado de sustentación</label>
+                    <select class="selectpicker" name="decision_panel" id="_decision_panel" data-live-search="true" data-width="100%" multiple>
+                        ${_decisionPanel}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="presentation_date">Fecha de sustentación</label>
+                    <div class="input-group date" id="presentation_datetimepicker">
+                        <input type="text" name="presentation_date" id="presentation_date" class="form-control" />
+                        <span class="input-group-addon">
+                            <span class="glyphicon glyphicon-calendar"></span>
+                        </span>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <button type="button" class="btn btn-success submit-btn">Asignar</button>
+                </div>
+            </form>
+        `;
     }
 }
 
