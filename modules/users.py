@@ -9,7 +9,7 @@ from aiohttp.web import View, web_request, HTTPFound, HTTPNotFound
 
 from utils.map import map_users
 from utils.validator import validator
-from utils.helpers import pass_user, view
+from utils.helpers import pass_user, view, logged_out
 
 
 class FailedAuth(Exception):
@@ -17,10 +17,12 @@ class FailedAuth(Exception):
 
 
 class Login(View):
+    @logged_out
     @template('user/login.html')
     async def get(self) -> dict:
         return {'location': 'login'}
 
+    @logged_out
     @template('user/login.html')
     async def post(self) -> dict:
         display_data = {'location': 'login'}
@@ -86,10 +88,12 @@ class Login(View):
 
 
 class Registration(View):
+    @logged_out
     @template('user/new.html')
     async def get(self) -> dict:
         return {'location': 'registration'}
 
+    @logged_out
     @template('user/new.html')
     async def post(self) -> dict:
         display_data = {'location': 'registration'}

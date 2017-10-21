@@ -1,9 +1,10 @@
 from asyncpg import Record
 from decimal import Decimal
 from typing import Union, List, Dict
+from aiohttp_session import get_session
 from datetime import datetime, timedelta
-from aiohttp.web import View, HTTPUnauthorized
 from aiohttp_jinja2 import template as jinja2_template
+from aiohttp.web import View, HTTPUnauthorized, HTTPFound
 
 from utils.auth import get_auth_data, NotAuthenticated
 from utils.map import parse_data_key
@@ -80,6 +81,15 @@ def pass_user(func):
 
         return await func(_self, user)
     return _view
+
+
+def logged_out(func):
+    async def wrapper(*args, **kwargs):
+        if 'id' in await get_session(args[0].request):
+            raise HTTPFound('/')
+
+        return await func(*args, **kwargs)
+    return wrapper
 
 
 def permission_required(permission: str):
