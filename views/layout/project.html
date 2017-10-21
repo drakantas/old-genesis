@@ -24,23 +24,6 @@
             </div>
         </div>
     </div>
-    <div class="content_wrapper padded">
-        <h3 style="margin-top:0;">{% if members|length == 1 %}Autor{% else %}Autores{% endif %}</h3>
-        <div class="list-group" style="margin:0;">
-            {% for member in members %}
-            <a href="/profile/{{ member.usuario_id }}" class="list-group-item">
-                <div class="row">
-                    <div class="col-md-3 text-center">
-                        {{ member.tipo_documento }} <strong>{{ member.usuario_id }}</strong>
-                    </div>
-                    <div class="col-md-9">
-                        {{ member.nombres }} {{ member.apellidos }}
-                    </div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
-    </div>
     <div class="content_wrapper">
         <ul class="nav nav-justified">
             <li {% if location == 'overview' %}class="active"{% endif %}>

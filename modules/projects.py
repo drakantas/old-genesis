@@ -1,3 +1,4 @@
+from html import escape
 from datetime import datetime
 from aiohttp.web import View, HTTPNotFound, json_response, HTTPUnauthorized, HTTPFound
 from asyncpg.pool import PoolConnectionHolder
@@ -34,7 +35,6 @@ class Project(View):
 
             project = dict(project)
             project['ciclo_str'] = school_term_to_str({k[6:]: v for k, v in project.items() if k.startswith('ciclo_')})
-
         else:
             school_term = await self.fetch_current_school_term(user['escuela'])
 
@@ -59,6 +59,8 @@ class Project(View):
             raise HTTPNotFound
 
         project['activo'] = project['ciclo_fecha_comienzo'] <= datetime.utcnow() <= project['ciclo_fecha_fin']
+        project['descripcion'] = escape(project['descripcion'])
+        project['linea_investigacion'] = escape(project['linea_investigacion'])
 
         return flatten(project, {})
 
@@ -224,7 +226,7 @@ class Project(View):
 
     async def fetch_project(self, student: int, school_term: int):
         query = '''
-            SELECT proyecto.id, proyecto.titulo
+            SELECT proyecto.*
             FROM integrante_proyecto
             INNER JOIN proyecto
                     ON proyecto.id = integrante_proyecto.proyecto_id
@@ -238,7 +240,7 @@ class Project(View):
 
     async def fetch_project_by_id(self, project: int, school: int):
         query = '''
-            SELECT proyecto.id, proyecto.titulo, ciclo_academico.fecha_comienzo as ciclo_fecha_comienzo,
+            SELECT proyecto.*, ciclo_academico.fecha_comienzo as ciclo_fecha_comienzo,
             ciclo_academico.fecha_fin as ciclo_fecha_fin, ciclo_academico.id as ciclo_id
             FROM proyecto
             INNER JOIN ciclo_academico
