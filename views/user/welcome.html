@@ -1,0 +1,12 @@
+{% extends "layout/app.html" %}
+
+{% block breadcrumbs %}
+<a class="current_page">Inicio</a>
+{% endblock %}
+
+{% block content %}
+    <div class="content_wrapper padded text-center">
+       <h2 style="margin-top:0;">Bienvenido, {{ user.nombres }} {{ user.apellidos }}</h2>
+        <h4>Selecciona una opción en el menú lateral izquierdo para realizar la actividad que se indica.</h4>
+    </div>
+{% endblock %}

@@ -38,8 +38,10 @@ class Login(View):
                 await self.auth(id_, password)
             except FailedAuth as e:
                 errors = [str(e)]
-            finally:
+            else:
                 await self.init_session(id_)
+
+                raise HTTPFound('/')  # Redirigir al landing page
 
         if errors:
             display_data['errors'] = errors
@@ -460,6 +462,12 @@ class EditProfile(View):
                                                                  nationality, district, gender)
 
 
+class Welcome(View):
+    @view('user.welcome')
+    async def get(self, user: dict):
+        return {}
+
+
 routes = {
     'login': Login,
     'logout': Logout,
@@ -472,5 +480,6 @@ routes = {
     },
     'users/list':  UsersList,
     'users/list/page-{page:[1-9][0-9]*}': UsersList,
-    'profile/{_user_id:[0-9]+}': ReadProfile
+    'profile/{_user_id:[0-9]+}': ReadProfile,
+    '/': Welcome
 }
