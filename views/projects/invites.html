@@ -1,0 +1,47 @@
+{% extends "layout/app.html" %}
+
+{% block breadcrumbs %}
+<a href="/">Inicio</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a>Proyectos</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a class="current_page">Invitaciones</a>
+{% endblock %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <h2 style="margin-top:0;">Invitaciones</h2>
+        <hr class="divider" />
+        {% if errors is defined %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div><hr class="divider" />
+        {% endif %}
+        <div class="alert alert-info">
+            Al aceptar una invitación, será imposible que cambies de grupo. También, todas las otras invitaciones serán canceladas.
+        </div>
+        <hr class="divider" />
+        {% if invites is defined %}
+        {% if not invites %}
+        <div class="alert alert-warning">
+            No hay invitaciones pendientes...
+        </div>
+        {% else %}
+        <div class="list-group">
+            {% for invite in invites %}
+            <div class="list-group-item">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <strong>{{ invite.titulo }}</strong><br />
+                        Por, {{ invite.autor }}
+                    </div>
+                    <div class="col-sm-4 text-center">
+                        {{ invite.fecha_integrar }}
+                    </div>
+                    <div class="col-sm-2 text-center">
+                        <a href="/projects/{{ invite.proyecto_id }}/accept-invite" class="btn btn-success btn-sm btn-block">Aceptar</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+{% endblock %}

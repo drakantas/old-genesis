@@ -1,5 +1,5 @@
 from datetime import datetime
-from aiohttp.web import View, HTTPNotFound, json_response, HTTPUnauthorized
+from aiohttp.web import View, HTTPNotFound, json_response, HTTPUnauthorized, HTTPFound
 from asyncpg.pool import PoolConnectionHolder
 from typing import Generator
 
@@ -22,8 +22,8 @@ class Project(View):
             return False
         return True
 
-    async def get_project(self, user: dict) -> dict:
-        if not await self.check_permissions(user):
+    async def get_project(self, user: dict, ignore_check: bool = False) -> dict:
+        if not ignore_check and not await self.check_permissions(user):
             raise HTTPUnauthorized
 
         if self.request.match_info['project'] != 'my-project':
@@ -301,6 +301,39 @@ class Project(View):
 
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchrow(project, author, review, is_published)
+
+    async def fetch_invites(self, user: int, school_term: int):
+        query = '''
+            SELECT integrante_proyecto.*, proyecto.titulo,
+                  (SELECT CONCAT(usuario.nombres, ' ', usuario.apellidos)
+                   FROM integrante_proyecto
+                   LEFT JOIN usuario
+                          ON usuario.id = integrante_proyecto.usuario_id
+                   WHERE integrante_proyecto.proyecto_id = proyecto.id AND
+                         integrante_proyecto.aceptado = TRUE
+                   LIMIT 1
+                   ) as autor
+            FROM integrante_proyecto
+            LEFT JOIN proyecto
+                   ON proyecto.id = integrante_proyecto.proyecto_id AND
+                      proyecto.ciclo_acad_id = $2
+            WHERE integrante_proyecto.usuario_id = $1 AND
+                  proyecto.ciclo_acad_id = $2 AND
+                  integrante_proyecto.aceptado = FALSE
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(user, school_term)
+
+    async def fetch_invite(self, project: int, student: int):
+        query = '''
+            SELECT *
+            FROM integrante_proyecto
+            WHERE integrante_proyecto.proyecto_id = $1 AND
+                  integrante_proyecto.usuario_id = $2
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(project, student)
 
 
 class ProjectsList(View):
@@ -820,6 +853,57 @@ class AssignPresentationDate(Project):
             return '{} debe ser un formato de fecha adecuado'.format(name)
 
 
+class InvitesList(Project):
+    @view('projects.invites')
+    @permission_required('crear_proyecto')
+    async def get(self, user: dict):
+        school_term = await self.fetch_current_school_term(user['escuela'])
+
+        if not school_term:
+            return {'error': 'No hay un ciclo académico registrado'}
+
+        return {'invites': flatten(await self.fetch_invites(user['id'], school_term['id']), {})}
+
+
+class AcceptInvite(Project):
+    @pass_user
+    @permission_required('crear_proyecto')
+    async def get(self, user: dict):
+        if self.request.match_info['project'] == 'my-project':
+            raise HTTPNotFound
+
+        if user['has_project']:
+            raise HTTPNotFound
+
+        project = await self.get_project(user, ignore_check=True)
+        invite = await self.fetch_invite(project['id'], user['id'])
+
+        if not invite:
+            raise HTTPNotFound
+
+        await self.update(project['id'], user['id'])
+
+        raise HTTPFound('/projects/my-project/overview')
+
+    async def update(self, project: int, student: int):
+        async with self.request.app.db.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute('''
+                    DELETE FROM integrante_proyecto
+                    WHERE proyecto_id != $1 AND
+                          usuario_id = $2 AND
+                          aceptado = FALSE
+                ''', project, student)
+
+                await connection.execute('''
+                    UPDATE integrante_proyecto
+                    SET aceptado = TRUE
+                    WHERE proyecto_id = $1 AND
+                          usuario_id = $2 AND
+                          aceptado = FALSE
+                ''', project, student)
+
+
 routes = {
     'projects': {
         'create-new': CreateProject,
@@ -829,11 +913,13 @@ routes = {
             'files': ProjectFiles,
             'review/{review:[1-9][0-9]*}': SingleReview,
             'assign-review': AssignReviewer,
-            'assign-presentation': AssignPresentationDate
+            'assign-presentation': AssignPresentationDate,
+            'accept-invite': AcceptInvite
         },
         'pending-reviews': PendingReviewsList,
         'list': ProjectsList,
-        'list/school-term-{school_term:[1-9][0-9]*}': ProjectsList
+        'list/school-term-{school_term:[1-9][0-9]*}': ProjectsList,
+        'invites': InvitesList
     },
     'reviewers': GetReviewers,
     'decision-panel': GetDecisionPanel

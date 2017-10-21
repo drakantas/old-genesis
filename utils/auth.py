@@ -46,7 +46,32 @@ async def get_auth_data(request: Request) -> dict:
                                                           ciclo_academico.escuela = usuario.escuela
                                                     LIMIT 1) AND
                           integrante_proyecto.usuario_id = usuario.id
-                   ) as has_project
+                   ) as has_project,
+                   (SELECT COUNT(true)
+                    FROM integrante_proyecto
+                    LEFT JOIN proyecto
+                           ON proyecto.id = integrante_proyecto.proyecto_id
+                    WHERE integrante_proyecto.usuario_id = usuario.id AND
+                          integrante_proyecto.aceptado = FALSE AND
+                          proyecto.ciclo_acad_id = (SELECT id FROM ciclo_academico
+                                                    WHERE ciclo_academico.fecha_comienzo <= $2 AND
+                                                          ciclo_academico.fecha_fin >= $2 AND
+                                                          ciclo_academico.escuela = usuario.escuela
+                                                    LIMIT 1)
+                    LIMIT 1
+                   ) as invitaciones,
+                   (SELECT COUNT(true)
+                    FROM observacion_proyecto
+                    LEFT JOIN proyecto
+                           ON proyecto.id = observacion_proyecto.proyecto_id
+                    WHERE proyecto.ciclo_acad_id = (SELECT id FROM ciclo_academico
+                                                    WHERE ciclo_academico.fecha_comienzo <= $2 AND
+                                                          ciclo_academico.fecha_fin >= $2 AND
+                                                          ciclo_academico.escuela = usuario.escuela
+                                                    LIMIT 1) AND
+                          finalizado = FALSE AND
+                          observacion_proyecto.usuario_id = usuario.id
+                   ) as observaciones_pendientes
             FROM usuario
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id

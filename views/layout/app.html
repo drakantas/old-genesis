@@ -145,6 +145,15 @@
             </ul>
         </div>
     </div>
+    {% if user.permissions.crear_proyecto or user.permissions.revisar_proyectos %}
+    <div class="user" style="padding-top:13px;padding-bottom:13px;">
+        {% if user.permissions.crear_proyecto and not user.has_project %}
+        <a href="/projects/invites" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Invitaciones a proyectos"><span class="glyphicon glyphicon-bell"></span> <span class="badge">{{ user.invitaciones }}</span></a>
+        {% elif user.permissions.revisar_proyectos %}
+        <a href="/projects/pending-reviews" class="btn btn-default" data-toggle="tooltip" data-placement="bottom" title="Observaciones pendiantes por ser realizadas"><span class="glyphicon glyphicon-bell"></span> <span class="badge">{{ user.observaciones_pendientes }}</span></a>
+        {% endif %}
+    </div>
+    {% endif %}
 </div>
 <div id="content">
     {% block content %}

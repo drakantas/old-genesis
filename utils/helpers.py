@@ -1,7 +1,7 @@
 from asyncpg import Record
 from decimal import Decimal
-from datetime import datetime
 from typing import Union, List, Dict
+from datetime import datetime, timedelta
 from aiohttp.web import View, HTTPUnauthorized
 from aiohttp_jinja2 import template as jinja2_template
 
@@ -133,10 +133,10 @@ def flatten(data: Union[List, Dict, Record], time_config: dict) -> Union[List, D
 
         for e in data:
             if isinstance(e, datetime):
-                _data.append(humanize_datetime(e, **time_config))
+                _data.append(humanize_datetime(e - timedelta(hours=5), **time_config))
             elif isinstance(e, (Record, dict, list)):
                 _data.append(flatten(e, time_config))
-            elif isinstance(v, Decimal):
+            elif isinstance(e, Decimal):
                 _data.append(float(e))
             else:
                 _data.append(e)
