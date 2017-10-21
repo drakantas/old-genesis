@@ -81,7 +81,7 @@
             </ul>
         </li>
         {% endif %}
-        {% if user.permissions.crear_proyecto or user.permissions.ver_listado_proyectos or user.permissions.revisar_proyectos %}
+        {% if user.permissions.crear_proyecto or user.permissions.ver_listado_proyectos or user.permissions.revisar_proyectos or user.permissions.gestionar_proyectos %}
         <li>
             <a href="#" class="has-arrow">
                 <span class="glyphicon glyphicon-education"></span> Proyectos
@@ -100,6 +100,9 @@
                     {% endif %}
                     {% if user.permissions.revisar_proyectos %}
                     <a href="/projects/pending-reviews"><span class="glyphicon glyphicon-menu-right"></span> Observaciones pendientes</a>
+                    {% endif %}
+                    {% if user.permissions.gestionar_proyectos %}
+                    <a href="/projects/eligible-projects"><span class="glyphicon glyphicon-menu-right"></span> Proyectos aptos</a>
                     {% endif %}
                 </li>
             </ul>

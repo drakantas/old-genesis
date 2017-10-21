@@ -577,12 +577,65 @@ class UpdateGrade(View):
 
 class CreateGradingStructure(View):
     @view('grades.create_structure')
+    @permission_required('gestionar_notas')
     async def get(self, user: dict):
         return {}
 
     @view('grades.create_structure')
+    @permission_required('gestionar_notas')
     async def post(self, user: dict):
         return {}
+
+
+class EligibleProjects(View):
+    @view('projects.eligible_projects')
+    @permission_required('gestionar_proyectos')
+    async def get(self, user: dict):
+        school_term = await self.fetch_current_school_term(user['escuela'])
+
+        if not school_term:
+            return {'error': 'No hay un ciclo académico registrado'}
+
+        projects = flatten(await self.fetch_projects(school_term['id']), {})
+
+        for i, project in enumerate(projects):
+            projects[i]['members'] = flatten(await self.fetch_members(project['id'], school_term['id']), {})
+
+        return {'projects': projects}
+
+    async def fetch_members(self, project: int, school_term: int):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT COALESCE(promedio_notas_ciclo.valor, 0.0) as promedio,
+                       usuario.nombres, usuario.apellidos
+                FROM integrante_proyecto
+                LEFT JOIN usuario
+                       ON usuario.id = integrante_proyecto.usuario_id
+                LEFT JOIN promedio_notas_ciclo
+                       ON promedio_notas_ciclo.estudiante_id = integrante_proyecto.usuario_id AND
+                          promedio_notas_ciclo.ciclo_acad_id = $2
+                WHERE integrante_proyecto.proyecto_id = $1
+            ''')).fetch(project, school_term)
+
+    async def fetch_projects(self, school_term: int):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT *
+                FROM proyecto
+                WHERE ciclo_acad_id = $1
+            ''')).fetch(school_term)
+
+    async def fetch_current_school_term(self, school: int):
+        query = '''
+            SELECT id, fecha_comienzo, fecha_fin
+            FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin AND
+                      escuela = $2
+                LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
 
 
 routes = {
@@ -594,7 +647,8 @@ routes = {
             'school-term-{school_term:[1-9][0-9]*}/{student_id:[1-9][0-9]*}': ReadGradeReport
         },
         'assign': AssignGrade,
-        'update/{grade_id:[1-9][0-9]*}/student-{student_id:[1-9][0-9]*}': UpdateGrade
+        'update/{grade_id:[1-9][0-9]*}/student-{student_id:[1-9][0-9]*}': UpdateGrade,
     },
-    'school-term/create-grading-structure': CreateGradingStructure
+    'school-term/create-grading-structure': CreateGradingStructure,
+    'projects/eligible-projects': EligibleProjects
 }

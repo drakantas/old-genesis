@@ -1,0 +1,81 @@
+{% extends "layout/app.html" %}
+
+{% block breadcrumbs %}
+<a href="/">Inicio</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a href="/projects/list">Proyectos</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a class="current_page">Proyectos aptos</a>
+{% endblock %}
+
+{% block content %}
+    <div class="content_wrapper padded">
+        <h2 style="margin:0;">Listado de proyectos aptos</h2>
+        <hr class="divider" />
+        {% if not projects %}
+        <div class="alert alert-warning">
+            No hay proyectos registrados para este ciclo académico
+        </div>
+        {% else %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Título</th>
+                    <th>Estudiante</th>
+                    <th>Individual</th>
+                    <th>¿Entonces?</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for project in projects %}
+                {% if project.members|length != 1 %}
+                <tr>
+                    <td rowspan="2">{{ project.titulo }}</td>
+                    <td rowspan="1">{{ project.members.0.nombres }} {{ project.members.0.apellidos }}</td>
+                    <td rowspan="1">
+                        {% if project.members.0.promedio < 10.5 %}
+                        NO APTO
+                        {% else %}
+                        APTO
+                        {% endif %}
+                    </td>
+                    <td rowspan="2">
+                        {% if project.members.0.promedio < 10.5 or project.members.1.promedio < 10.5%}
+                        NO APTO
+                        {% else %}
+                        APTO
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td rowspan="1">{{ project.members.1.nombres }} {{ project.members.1.apellidos }}</td>
+                    <td rowspan="1">
+                        {% if project.members.1.promedio < 10.5 %}
+                        NO APTO
+                        {% else %}
+                        APTO
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td>{{ project.titulo }}</td>
+                    <td>{{ project.members.0.nombres }} {{ project.members.0.apellidos }}</td>
+                    <td>
+                        {% if project.members.0.promedio < 10.5 %}
+                        NO APTO
+                        {% else %}
+                        APTO
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if project.members.0.promedio < 10.5 %}
+                        NO APTO
+                        {% else %}
+                        APTO
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    </div>
+{% endblock %}
