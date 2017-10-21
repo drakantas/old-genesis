@@ -51,7 +51,7 @@
                 {% for student in students %}
                 <tr>
                     <td width="10%"><abbr data-toggle="tooltip" title="{{ student.tipo_documento }}" class="student_id">{{ student.id }}</abbr></td>
-                    <td width="20%"><a href="/profile/{{ student.id }}" data-toggle="tooltip" title="Ver perfíl">{{ student.apellidos }} {{ student.nombres }}</a></td>
+                    <td><a href="/profile/{{ student.id }}" data-toggle="tooltip" title="Ver perfíl">{{ student.apellidos }} {{ student.nombres }}</a></td>
                     {% for attendance in student.attendance %}
                     <td>
                         <div class="btn-group btn-group-xs" role="group">

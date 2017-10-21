@@ -1,11 +1,49 @@
 from decimal import Decimal
 from datetime import datetime
 from typing import Union, Generator
+from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, json_response, HTTPNotFound, HTTPUnauthorized
 
 from utils.validator import validator
 from utils.map import map_users
 from utils.helpers import view, flatten, pass_user, permission_required, school_term_to_str
+
+
+class FinalGrade:
+    @staticmethod
+    async def fetch_final_grade(student: int, school_term: int, dbi: PoolConnectionHolder = None):
+        query = '''
+            WITH ciclo_academico AS (
+                SELECT id
+                FROM ciclo_academico
+                WHERE ciclo_academico.id = $2
+                LIMIT 1
+            )
+            SELECT SUM(COALESCE(nota_estudiante.valor, 0.0) * nota.porcentaje / 100.0)
+            FROM estructura_notas
+            LEFT JOIN nota
+                   ON nota.id = estructura_notas.nota_id
+            LEFT JOIN nota_estudiante
+                   ON nota_estudiante.nota_id = estructura_notas.nota_id AND
+                      nota_estudiante.estudiante_id = $1
+            WHERE estructura_notas.ciclo_acad_id = (SELECT id from ciclo_academico) AND
+                  nota_estudiante.estudiante_id = $1
+            LIMIT 1
+        '''
+        async with dbi.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(student, school_term) or Decimal(0.0)
+
+    @staticmethod
+    async def update(student: int, school_term: int, dbi: PoolConnectionHolder = None,
+                     callback=None):
+        statement = '''
+            INSERT INTO promedio_notas_ciclo (ciclo_acad_id, estudiante_id, valor)
+            VALUES ($2, $1, $3)
+            ON CONFLICT ON CONSTRAINT promedio_notas_ciclo_pkey
+            DO UPDATE SET valor = $3
+        '''
+        async with dbi.acquire() as connection:
+            await connection.execute(statement, student, school_term, await callback(student, school_term, dbi=dbi))
 
 
 class ClassGrades(View):
@@ -397,6 +435,9 @@ class AssignGrade(View):
 
             await self.create(grade_id, student_id, Decimal(data['score']))
 
+            await FinalGrade.update(student_id, school_term['id'], dbi=self.request.app.db,
+                                    callback=FinalGrade.fetch_final_grade)  # Actualizar promedio final
+
         return json_response({'success': 'Se ha registrado la nota exitosamente'})
 
     async def validate(self, data: dict):
@@ -490,12 +531,6 @@ class UpdateGrade(View):
             return json_response({'message': 'No se puede actualizar las notas de un ciclo académico ya culminado o'
                                              'que recién va a comenzar'}, status=400)
 
-        final_grade_exists = await self.fetch_final_grade(student_id, grade['ciclo_acad_id']) or False
-
-        if final_grade_exists:
-            return json_response({'message': 'No puedes actualizar esta nota porque ya se generó el promedio'
-                                             'final del curso'}, status=400)
-
         data = await self.request.post()  # Coger data
 
         if 'score' not in data:
@@ -507,6 +542,9 @@ class UpdateGrade(View):
             return json_response({'message': errors}, status=400)
 
         await self.update(grade_id, student_id, Decimal(data['score']))
+
+        await FinalGrade.update(student_id, grade['ciclo_acad_id'], dbi=self.request.app.db,
+                                callback=FinalGrade.fetch_final_grade)  # Actualizar promedio final
 
         return json_response({'message': 'Se actualizó la nota exitosamente'})
 
@@ -524,17 +562,6 @@ class UpdateGrade(View):
         '''
         async with self.request.app.db.acquire() as connection:
             return await connection.execute(query, grade, student, score)
-
-    async def fetch_final_grade(self, student: int, school_term: int):
-        query = '''
-            SELECT true
-            FROM promedio_notas_ciclo
-            WHERE promedio_notas_ciclo.ciclo_acad_id = $1 AND
-                  promedio_notas_ciclo.estudiante_id = $2
-            LIMIT 1;
-        '''
-        async with self.request.app.db.acquire() as connection:
-            return await (await connection.prepare(query)).fetchrow(school_term, student)
 
     async def fetch_grade(self, grade: int, student: int):
         query = '''
