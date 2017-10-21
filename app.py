@@ -3,14 +3,25 @@ import asyncpg
 
 from pathlib import Path
 from jinja2 import FileSystemLoader
-from aiohttp.web import Application, run_app
+from aiohttp.web import Application, run_app, middleware, HTTPFound
 from aiohttp_jinja2 import setup as jinja_setup
 from aiohttp_session import setup as db_session_setup
 
-from utils import router, database_session
+from utils import router, database_session, auth
 from config import *
 
-app = Application()
+
+@middleware
+async def unauthenticated_middleware(request, handler):
+    try:
+        response = await handler(request)
+    except auth.NotAuthenticated:
+        raise HTTPFound('/login')
+    else:
+        return response
+
+
+app = Application(middlewares=[unauthenticated_middleware])
 
 app.db = None
 
