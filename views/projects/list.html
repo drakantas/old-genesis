@@ -92,9 +92,11 @@
                     {% if project.presentation_date is none %}
                     No se asignó un jurado aún
                     {% else %}
-                    {% for panel_member in decision_panel %}
-                    {{ panel_member.nombres }} {{ panel_member.apellidos }}<br />
+                    <ul class="list-group" style="margin:0;">
+                    {% for panel_member in project.decision_panel %}
+                        <li class="list-group-item">{{ panel_member.nombres }} {{ panel_member.apellidos }}</li>
                     {% endfor %}
+                    </ul>
                     {% endif %}
                 </td>
                 <td rowspan="2" width="15%">
