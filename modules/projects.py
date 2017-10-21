@@ -494,7 +494,7 @@ class CreateProject(Project):
 
         data = await self.request.post()
 
-        if not check_form_data(data, 'title', 'partner'):
+        if not check_form_data(data, 'title', 'partner', 'line_of_research', 'description'):
             return {'error': 'Data enviada no es correcta',
                     'students': await self.fetch_fellas(school_term['id'])}
 
@@ -502,33 +502,34 @@ class CreateProject(Project):
 
         errors = await self.validate(data, students)
 
-        await self.create(data, school_term['id'], user['id'])
-
         if errors:
             return {'errors': errors,
                     'students': students}
+
+        await self.create(data, school_term['id'], user['id'])
 
         return {'students': students,
                 'success': 'Has registrado tu proyecto exitosamente'}
 
     async def create(self, data: dict, school_term: int, user: int):
 
-        query_params = [data['title'], school_term, user, datetime.utcnow()]
+        query_params = [data['title'], school_term, data['line_of_research'], data['description'], user,
+                        datetime.utcnow()]
 
         if data['partner'] == '0':
             with_partner = ''
         else:
-            with_partner = ', ($5, (SELECT id FROM proyecto), $4, false)'
+            with_partner = ', ($7, (SELECT id FROM proyecto), $6, false)'
             query_params.append(int(data['partner']))
 
         query = '''
             WITH proyecto AS (
-                INSERT INTO proyecto (titulo, ciclo_acad_id)
-                VALUES ($1, $2)
+                INSERT INTO proyecto (titulo, ciclo_acad_id, linea_investigacion, descripcion)
+                VALUES ($1, $2, $3, $4)
                 RETURNING id
             )
             INSERT INTO integrante_proyecto (usuario_id, proyecto_id, fecha_integrar, aceptado)
-            VALUES($3, (SELECT id FROM proyecto), $4, true){0}
+            VALUES($5, (SELECT id FROM proyecto), $6, true){0}
         '''.format(with_partner)
 
         async with self.request.app.db.acquire() as connection:
@@ -537,6 +538,8 @@ class CreateProject(Project):
     async def validate(self, data: dict, students: list):
         validation_groups = [
             ['Título', data['title'], 'len:16,128|unique:titulo,proyecto'],
+            ['Línea de investigación', data['line_of_research'], 'len:16,128'],
+            ['Descripción', data['description'], 'len:32,512']
         ]
 
         if '0' != data['partner']:

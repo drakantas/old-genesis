@@ -283,7 +283,9 @@ class Projects
                 return callback($this.reviewers);
              })
              .catch(function (error) {
-                console.log(error);
+                const modalBody = $($('#assign_reviewer').find('.modal-body')[0]);
+                modalBody.html(`<div class="alert alert-danger">${error.response.data.message}</div>`);
+                $('#assign_reviewer').modal();
              });
     }
 
@@ -302,7 +304,9 @@ class Projects
                 return callback($this.decisionPanel);
              })
              .catch(function (error) {
-                console.log(error);
+                const modalBody = $($('#assign_presentation_date').find('.modal-body')[0]);
+                modalBody.html(`<div class="alert alert-danger">${error.response.data.message}</div>`);
+                $('#assign_presentation_date').modal();
              });
     }
 

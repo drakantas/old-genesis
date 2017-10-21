@@ -45,6 +45,14 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-group">
+                <label for="line_of_research">Línea de investigación</label>
+                <input type="text" name="line_of_research" id="line_of_research" class="form-control" placeholder="Línea de investigación" />
+            </div>
+            <div class="form-group">
+                <label for="description">Descripción</label>
+                <textarea rows="5" name="description" id="description" class="form-control" placeholder="Descripción"></textarea>
+            </div>
         </div>
         <div class="content_wrapper text-right" style="background-color:transparent;box-shadow:none;">
             <a href="/" class="btn btn-default btn-lg">Cancelar</a> <button type="submit" class="btn btn-success btn-lg" {% if error is defined %}disabled{% endif %}>Crear</button>
