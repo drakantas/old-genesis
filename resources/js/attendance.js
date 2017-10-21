@@ -25,8 +25,17 @@ class Attendance
         $('a.attendance-btn').on('click', (e) => {
             const student = $($(e.currentTarget).parent().parent().find('.student_id')[0]);
             const student_id = student.text();
+            const _path = document.location.pathname.split('/');
+            const _school_term = _path[_path.length - 1];
 
-            $this.fetchSingleReport(student_id);
+            if (_school_term.startsWith('school-term-'))
+            {
+                $this.fetchSingleReport(student_id, _school_term.substr(12));
+            }
+            else
+            {
+                $this.fetchSingleReport(student_id);
+            }
 
             $('#student_attendance_report').modal();
         });

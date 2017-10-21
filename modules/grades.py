@@ -513,7 +513,7 @@ class AssignGrade(View):
 class UpdateGrade(View):
     @pass_user
     @permission_required('asignar_notas')
-    async def post(self):
+    async def post(self, user: dict):
         if 'grade_id' not in self.request.match_info or 'student_id' not in self.request.match_info:
             raise HTTPNotFound
 
@@ -550,7 +550,8 @@ class UpdateGrade(View):
 
     async def validate(self, data: dict) -> Union[list, None]:
         return await validator.validate([
-                ['Puntaje', data['score'], 'len:1,4|numeric|custom', self._validate_score]
+            ['Nota', data['grade_id'], 'digits'],
+            ['Puntaje', data['score'], 'len:1,4|numeric|custom', self._validate_score]
         ], self.request.app.db)
 
     async def update(self, grade: int, student: int, score: Decimal):
@@ -665,6 +666,42 @@ class EligibleProjects(View):
             return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
 
 
+class GetAssignedGrades(View):
+    @pass_user
+    @permission_required('asignar_notas')
+    async def get(self, user: dict):
+        student = int(self.request.match_info['student'])
+        grades = flatten(await self.get_grades(user['escuela'], student), {})
+
+        if not grades:
+            return json_response({'message': 'No se encontraron notas a mostrar'}, status=400)
+
+        return json_response({'grades': grades})
+
+    async def get_grades(self, school: int, student: int):
+        query = '''
+            WITH ciclo_academico AS (
+                SELECT id
+                FROM ciclo_academico
+                WHERE ciclo_academico.escuela = $1 AND
+                      ciclo_academico.fecha_comienzo <= $2 AND
+                      ciclo_academico.fecha_fin >= $2
+                LIMIT 1
+            )
+            SELECT estructura_notas.nota_id as id, nota.descripcion as descripcion
+            FROM estructura_notas
+            LEFT JOIN nota
+                   ON nota.id = estructura_notas.nota_id
+            RIGHT JOIN nota_estudiante
+                    ON nota_estudiante.nota_id = estructura_notas.nota_id
+            WHERE estructura_notas.ciclo_acad_id = (SELECT id FROM ciclo_academico) AND
+                  nota_estudiante.estudiante_id = $3
+            ORDER BY estructura_notas.nota_id ASC
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(school, datetime.utcnow(), student)
+
+
 routes = {
     'grades': {
         'class-report': ClassGrades,
@@ -675,6 +712,7 @@ routes = {
         },
         'assign': AssignGrade,
         'update/{grade_id:[1-9][0-9]*}/student-{student_id:[1-9][0-9]*}': UpdateGrade,
+        'assigned-grades/{student:[1-9][0-9]*}': GetAssignedGrades
     },
     'school-term/create-grading-structure': CreateGradingStructure,
     'projects/eligible-projects': EligibleProjects

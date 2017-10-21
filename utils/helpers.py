@@ -2,7 +2,7 @@ from asyncpg import Record
 from decimal import Decimal
 from typing import Union, List, Dict
 from aiohttp_session import get_session
-from datetime import datetime, timedelta
+from datetime import datetime
 from aiohttp_jinja2 import template as jinja2_template
 from aiohttp.web import View, HTTPUnauthorized, HTTPFound
 
@@ -14,7 +14,7 @@ same_year_st = '{year} {month1}-{month2}'
 diff_year_str = '{year1} {month1} - {year2} {month2}'
 
 
-def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', status_code: int = 200):
+def view(template: str, *, pass_user_: bool = True, encoding: str = 'utf-8', status_code: int = 200):
     def wrapper(func):
         _view_template = template
 
@@ -28,7 +28,7 @@ def view(template: str, *, pass_user: bool = True, encoding: str = 'utf-8', stat
         async def _view(_self: View):
             _context = dict()
 
-            if pass_user:
+            if pass_user_:
                 # We're in a view class
                 request = _self.request
 
@@ -143,7 +143,7 @@ def flatten(data: Union[List, Dict, Record], time_config: dict) -> Union[List, D
 
         for e in data:
             if isinstance(e, datetime):
-                _data.append(humanize_datetime(e - timedelta(hours=5), **time_config))
+                _data.append(humanize_datetime(e, **time_config))
             elif isinstance(e, (Record, dict, list)):
                 _data.append(flatten(e, time_config))
             elif isinstance(e, Decimal):

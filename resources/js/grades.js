@@ -15,6 +15,7 @@ class Grades
         this.assignGradeBtnSelector = $(this.assignGradeBtn);
         this.assignGradeSelector = $(this.assignGrade);
         this._assign = $('#assign');
+        this.cheekyStudentId = null;
 
         this.registerEvents();
     }
@@ -52,7 +53,18 @@ class Grades
             const student = $($(e.currentTarget).parent().parent().find('.student_id')[0]);
             const student_id = student.text();
 
-            $this.fetchStudentGrades(student_id);
+            const _path = document.location.pathname.split('/');
+            const _school_term = _path[_path.length - 1];
+
+            if (_school_term.startsWith('school-term-'))
+            {
+                $this.fetchStudentGrades(student_id, _school_term.substr(12));
+            }
+            else
+            {
+                $this.fetchStudentGrades(student_id);
+            }
+
             $this.reportSelector.modal();
         });
 
@@ -114,6 +126,128 @@ class Grades
             $('#grade_id').val(1);
             $('#grade_id').selectpicker('refresh');
         });
+
+        $('.update_grade').on('click', (e) => {
+            $this.handleUpgradeGradeEvent(e);
+        });
+
+        $('#update_grade').on('hidden.bs.modal', (e) => {
+            const modalBody = $('#update_grade .modal-body');
+            modalBody.html('');
+        });
+
+        $(document).on('click', '#update_grade button#update', (e) => {
+            $this.postUpgradedGrade(e);
+        });
+    }
+
+    handleUpgradeGradeEvent(e)
+    {
+        const student = $(e.currentTarget).parent().parent();
+        const student_id = student.data('id');
+
+        this.cheekyStudentId = student_id;
+        this.getAssignedGrades(student_id, this.handleAssignedGradesResponse);
+    }
+
+    postUpgradedGrade(e)
+    {
+        const form = $('#update_grade .modal-body').find('form')[0];
+        const data = new FormData(form);
+
+        const grade_id = $($(form).find('select#grade_id')[0]).find(':selected').val();
+        const student_id = this.cheekyStudentId;
+        const alert_wrapper = $('#update_grade .modal-body > .alert_wrapper');
+
+        let $this = this;
+
+        axios.post(`/grades/update/${grade_id}/student-${student_id}`, data,
+                   {'Content-Type': 'application/x-www-form-urlencoded'})
+             .then((response) => {
+                 alert_wrapper.html(`<div class="alert alert-success">${response.data.message}</div>`);
+             })
+             .catch((error) => {
+                 const response = error.response;
+
+                 if (response.status !== 400)
+                 {
+                    console.log(error);
+                    return;
+                 }
+
+                 let _e_message = null;
+                 if (Array.isArray(response.data.message))
+                 {
+                    let _e = '<ul>';
+                    for (const _error of response.data.message) {
+                        _e = _e + `<li>${_error}</li>`;
+                    }
+                    _e = _e + '</ul>';
+                    _e_message = _e;
+                 }
+                 else
+                 {
+                    _e_message = response.data.message;
+                 }
+
+                 alert_wrapper.html(`<div class="alert alert-danger">${_e_message}</div>`);
+             });
+    }
+
+    getAssignedGrades(student, callback)
+    {
+        let $this = this;
+
+        axios.get(`/grades/assigned-grades/${student}`)
+             .then(function (response) {
+                callback($this, response);
+             })
+             .catch(function (error) {
+                callback($this, error.response);
+             });
+    }
+
+    handleAssignedGradesResponse($this, response)
+    {
+        const modalBody = $('#update_grade .modal-body');
+
+        if (response.status === 400)
+        {
+            modalBody.html(`<div class="alert alert-danger">${response.data.message}</div>`);
+        }
+        else if (response.status === 200)
+        {
+            modalBody.html($this._updateGradeForm(response.data.grades));
+            $(modalBody.find('#grade_id')[0]).selectpicker();
+        }
+
+        $('#update_grade').modal();
+    }
+
+    _updateGradeForm(grades)
+    {
+        let _grades = '';
+
+        for (const grade of grades)
+        {
+            _grades = _grades + `<option value="${grade.id}">${grade.descripcion}</option>`;
+        }
+
+        return `
+            <div class="alert_wrapper"></div>
+            <form>
+                <div class="form-group">
+                    <label for="grade_id">Nota</label>
+                    <select id="grade_id" name="grade_id" class="selectpicker" data-live-search="true" data-width="100%">
+                        ${_grades}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="score">Puntaje</label>
+                    <input id="score" name="score" class="form-control" placeholder="Puntaje" />
+                </div>
+                <button class="btn btn-success" id="update" type="button">Corregir</button>
+            </form>`;
     }
 
     fetchStudentGrades(student, school_term = null)

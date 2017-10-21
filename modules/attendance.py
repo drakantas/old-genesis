@@ -12,29 +12,32 @@ class StudentsList(View):
     @permission_required('ver_listado_alumnos')
     async def get(self, user: dict):
         if 'school_term' in self.request.match_info:
-            school_term_id = await self.get_school_term(user['escuela'], int(self.request.match_info['school_term']))
+            school_term = await self.get_school_term(user['escuela'], int(self.request.match_info['school_term']))
         else:
-            school_term_id = await self.get_school_term(user['escuela'])
+            school_term = await self.get_school_term(user['escuela'])
 
-        if school_term_id is None:
+        if school_term is None:
             return {'school_term_has_not_begun': 'El ciclo académico no ha comenzado, tus acciones son limitadas'}
 
         # Estudiantes de escuela y tal
-        students = await self.get_students(school_term_id, user['escuela'])
+        students = await self.get_students(school_term['id'], user['escuela'])
         students = map_users(students)
 
         # Notas disponibles para este ciclo
-        dd_grades = await self.get_grades(school_term_id)
+        dd_grades = await self.get_grades(school_term['id'])
 
         # Ciclos académicos
         school_terms = await self.get_school_terms(user)
 
-        current_school_term_id = school_term_id
+        current_school_term_id = school_term['id']
+
+        can_do_grading = school_term['fecha_comienzo'] <= datetime.utcnow() <= school_term['fecha_fin']
 
         return {'students': students,
                 'dd_grades': dd_grades,
                 'school_terms': school_terms,
-                'current_school_term_id': current_school_term_id}
+                'current_school_term_id': current_school_term_id,
+                'can_do_grading': can_do_grading}
 
     async def get_school_terms(self, user: dict):
 
@@ -70,7 +73,7 @@ class StudentsList(View):
     async def get_school_term(self, school: int, school_term: int = None):
         if school_term is None:
             query = '''
-                SELECT id
+                SELECT id, fecha_comienzo, fecha_fin
                 FROM ciclo_academico
                 WHERE $1 >= fecha_comienzo AND
                       $1 <= fecha_fin AND
@@ -79,7 +82,7 @@ class StudentsList(View):
             '''
         else:
             query = '''
-                SELECT id
+                SELECT id, fecha_comienzo, fecha_fin
                 FROM ciclo_academico
                 WHERE id = $1 AND
                       escuela = $2
@@ -89,20 +92,14 @@ class StudentsList(View):
         async with self.request.app.db.acquire() as connection:
             statement = await connection.prepare(query)
             if school_term is None:
-                return await statement.fetchval(datetime.utcnow(), school)
+                return await statement.fetchrow(datetime.utcnow(), school)
             else:
-                return await statement.fetchval(school_term, school)
+                return await statement.fetchrow(school_term, school)
 
     async def get_students(self, school_term: int, school: int, student_role_id: int = 1, danger: int = 63,
                            amount: int = 1000):
         query = '''
-            WITH ciclo_academico AS (
-                SELECT fecha_comienzo, fecha_fin
-                FROM ciclo_academico
-                WHERE id = $1
-                LIMIT 1
-            ),
-            alumno AS (
+            WITH alumno AS (
                 SELECT usuario.id, tipo_documento, nombres, apellidos, escuela,
                     COALESCE(
                         (SELECT CAST(COUNT(CASE WHEN asistio=true THEN 1 ELSE NULL END) / CAST(COUNT(*) AS FLOAT) * 100

@@ -66,14 +66,14 @@
                 <tr><td colspan="6"><div class="alert alert-info">{{ school_term_has_not_begun }}</div></td></tr>
                 {% endif %}
                 {% for student in students %}
-                    <tr>
+                    <tr data-id="{{ student.id }}">
                         <td width="10%"><abbr data-toggle="tooltip" title="{{ student.tipo_documento }}" class="student_id">{{ student.id }}</abbr></td>
                         <td width="25%"><a href="/profile/{{ student.id }}" data-toggle="tooltip" title="Ver perfíl">{{ student.apellidos }} {{ student.nombres }}</a></td>
                         <td width="10%">{{ student.escuela }}</td>
                         <td width="25%">{{ student.titulo_proyecto }}</td>
                         <td width="10%">{{ student.asistencia }}% <a class="attendance-btn" data-toggle="tooltip" data-placement="top" title="Ver reporte de asistencias"><span class="glyphicon glyphicon-question-sign"></span></a></td>
                         <td width="20%">
-                            {% if user.permissions.asignar_notas %}
+                            {% if user.permissions.asignar_notas and can_do_grading %}
                             <button type="button" class="btn table-btn assign_grade" data-toggle="tooltip" title="Asignar nota"><span class="glyphicon glyphicon-pencil"></span></button>
                             <button type="button" class="btn table-btn update_grade" data-toggle="tooltip" title="Corregir nota"><span class="glyphicon glyphicon-erase"></span></button>
                             {% endif %}
