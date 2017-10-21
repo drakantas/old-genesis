@@ -1,0 +1,24 @@
+{% extends "layout/project.html" %}
+
+{% block project_page %}
+    <div class="content_wrapper padded">
+        <h3 style="margin-top:0;">Sustentación</h3>
+        <hr class="divider" />
+        <div class="text-center">
+            {% if not presentation %}
+            <div class="alert alert-warning">Todavía no se ha asignado una fecha de sustentación.</div>
+            {% else %}
+            <h4>{{ presentation.fecha }}</h4>
+            <br />
+            <ul class="list-group" style="max-width:400px;margin-left:auto;margin-right:auto;">
+                <li class="list-group-item active">Jurado</li>
+                {% for dp in decision_panel %}
+                <li class="list-group-item">
+                    {{ dp.nombres }} {{ dp.apellidos }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

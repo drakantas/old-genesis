@@ -51,6 +51,16 @@ data_map = {
         4: 'Jueves',
         5: 'Viernes',
         6: 'Sábado'
+    },
+
+    'isoweekdays': {
+        0: 6,  # Domingo
+        1: 0,  # Lunes
+        2: 1,
+        3: 2,
+        4: 3,
+        5: 4,
+        6: 5   # Sábado
     }
 }
 

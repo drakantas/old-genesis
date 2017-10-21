@@ -105,6 +105,17 @@ class Project(View):
 
         return reviews
 
+    async def _fetch_decision_panel(self, project: int):
+        query = '''
+            SELECT jurado_id, nombres, apellidos
+            FROM jurado_presentacion
+            LEFT JOIN usuario
+                   ON usuario.id = jurado_presentacion.jurado_id
+            WHERE presentacion_id = $1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(project)
+
     async def fetch_decision_panel(self, school: int):
         query = '''
             SELECT usuario.id, nombres, apellidos, rol_usuario.desc as rol
@@ -673,6 +684,31 @@ class ProjectFiles(Project):
                 'location': 'files'}
 
 
+class ProjectPresentation(Project):
+    @view('projects.presentation')
+    async def get(self, user: dict):
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+        presentation = flatten(await self.fetch_presentation(project['id']) or {}, {})
+        decision_panel = flatten(await self._fetch_decision_panel(project['id']) or [], {})
+
+        return {'project': project,
+                'members': members,
+                'presentation': presentation,
+                'decision_panel': decision_panel,
+                'is_member': await self.is_member(user, members),
+                'location': 'presentation'}
+
+    async def fetch_presentation(self, project: int):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT *
+                FROM presentacion_proyecto
+                WHERE proyecto_id = $1
+                LIMIT 1
+            ''')).fetchrow(project)
+
+
 class GetDecisionPanel(Project):
     @pass_user
     @permission_required('gestionar_proyectos')
@@ -916,6 +952,7 @@ routes = {
             'overview': ProjectOverview,
             'reviews': ProjectReviews,
             'files': ProjectFiles,
+            'presentation': ProjectPresentation,
             'review/{review:[1-9][0-9]*}': SingleReview,
             'assign-review': AssignReviewer,
             'assign-presentation': AssignPresentationDate,
