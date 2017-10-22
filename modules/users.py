@@ -261,13 +261,9 @@ class UploadApplication(View):
 
 
 class RecoverPassword(View):
+    @logged_out
     @template('user/recover_password.html')
-    async def get(self) -> dict:
-        return {'location': 'recover_password'}
-
-    @template('user/recover_password.html')
-    async def post(self) -> dict:
-
+    async def get(self):
         return {'location': 'recover_password'}
 
 
