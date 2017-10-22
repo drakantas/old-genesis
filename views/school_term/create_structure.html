@@ -1,0 +1,62 @@
+{% extends "layout/app.html" %}
+
+{% block breadcrumbs %}
+<a href="/">Inicio</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a class="current_page">Estructura de notas</a>
+{% endblock %}
+
+{% block content %}
+<form method="POST">
+    <div class="content_wrapper padded">
+        <h2 style="margin-top:0;">Crear estructura de notas</h2>
+        <hr class="divider" />
+        {% if errors is defined %}
+<div class="alert alert-danger" role="alert">
+    <ul>
+        {% for error in errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        {% if success is defined %}
+        <div class="alert alert-success" role="alert">
+            {{ success }}
+        </div>
+        {% elif error is defined %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+        {% elif not can_create_structure %}
+            <div class="alert alert-danger">
+                Ya se ha registrado una estructura de notas para este ciclo académico.
+            </div>
+        {% endif %}
+        <a href="javascript:;" class="btn btn-default {% if not can_create_structure %}disabled{% endif %}" id="addGroup">Agregar grupo</a>
+        <hr class="divider" />
+        <div class="list-group" id="gradesContainer">
+            <div class="list-group-item grade_group" data-group="1">
+                <input type="text" class="form-control" name="group_1" style="width:350px;display:inline-block;" placeholder="Nombre de grupo" {% if not can_create_structure %}disabled{% endif %} />
+                <a href="javascript:;" class="btn btn-primary {% if not can_create_structure %}disabled{% endif %}" id="addGrade">Agregar nota</a>
+                <hr class="divider" />
+                <div class="list-group grades">
+                    <div class="list-group-item">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="group_1_grade_1" placeholder="Nombre de nota" {% if not can_create_structure %}disabled{% endif %} />
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" class="form-control" name="group_1_grade_1_percentage" placeholder="Porcentaje" {% if not can_create_structure %}disabled{% endif %} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content_wrapper text-right" style="background-color:transparent;box-shadow:none;">
+        <a href="/" class="btn btn-default btn-lg {% if not can_create_structure %}disabled{% endif %}">Cancelar</a>
+        <button class="btn btn-success btn-lg " {% if not can_create_structure %}disabled{% endif %}>Crear</button>
+    </div>
+</form>
+{% endblock %}

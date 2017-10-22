@@ -21,4 +21,5 @@ require('../js/main_menu')
 require('../js/school_term');
 require('../js/attendance');
 require('../js/grades');
-require('../js/projects')
+require('../js/projects');
+require('../js/grading_structure');

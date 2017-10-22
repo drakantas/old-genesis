@@ -603,18 +603,6 @@ class UpdateGrade(View):
             return '{} debe de estar en el rango de 0 a 20'.format(name)
 
 
-class CreateGradingStructure(View):
-    @view('grades.create_structure')
-    @permission_required('gestionar_notas')
-    async def get(self, user: dict):
-        return {}
-
-    @view('grades.create_structure')
-    @permission_required('gestionar_notas')
-    async def post(self, user: dict):
-        return {}
-
-
 class EligibleProjects(View):
     @view('projects.eligible_projects')
     @permission_required('gestionar_proyectos')
@@ -714,6 +702,5 @@ routes = {
         'update/{grade_id:[1-9][0-9]*}/student-{student_id:[1-9][0-9]*}': UpdateGrade,
         'assigned-grades/{student:[1-9][0-9]*}': GetAssignedGrades
     },
-    'school-term/create-grading-structure': CreateGradingStructure,
     'projects/eligible-projects': EligibleProjects
 }

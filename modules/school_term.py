@@ -1,5 +1,6 @@
 import re
 from typing import Union
+from decimal import Decimal
 from aiohttp.web import View, HTTPFound
 from datetime import datetime, timedelta
 from asyncpg.pool import PoolConnectionHolder
@@ -16,6 +17,10 @@ SCHEDULE_KEY_FORMAT = r'schedule_([0-9]+)_(?:teacher|day|start_time|end_time)'
 SCHEDULE_KEY = re.compile(SCHEDULE_KEY_FORMAT)
 TIME_FORMAT = r'(?:1|2|3|4|5|6|7|8|9|10|11|12):[0-5][0-9] (?:AM|PM)'
 TIME = re.compile(TIME_FORMAT)
+GRADES_GROUP = r'group_([1-9][0-9]*)'
+GRADES_GROUP = re.compile(GRADES_GROUP)
+GRADE = r'group_([1-9][0-9]*)_grade_([1-9][0-9]*)'
+GRADE = re.compile(GRADE)
 
 df = '%m/%d/%Y'
 
@@ -292,9 +297,174 @@ class DisableStudents(View):
             ''', datetime.utcnow() - timedelta(hours=5), school)
 
 
+class CreateGradingStructure(View):
+    @view('school_term.create_structure')
+    @permission_required('gestionar_notas')
+    async def get(self, user: dict):
+        return {'can_create_structure': await self.can_create_structure(user['escuela'])}
+
+    @view('school_term.create_structure')
+    @permission_required('gestionar_notas')
+    async def post(self, user: dict):
+        display_data = {
+            'can_create_structure': await self.can_create_structure(user['escuela']),
+        }
+
+        if not display_data['can_create_structure']:
+            display_data['error'] = 'No puedes registrar una estructura de notas porque ya se registró una.'
+            return display_data
+
+        school_term = await self.fetch_current_school_term(user['escuela'])
+
+        if not school_term:
+            display_data['error'] = 'No hay un ciclo académico registrado.'
+            return display_data
+
+        data = await self.request.post()
+
+        if not data:
+            display_data['error'] = 'No se enviaron los parámetros necesarios...'
+            return display_data
+
+        try:
+            data = await self.get_data(data)
+        except ValueError:
+            display_data['error'] = 'No se enviaron los parámetros necesarios...'
+            return display_data
+
+        errors = await self.validate(data)
+
+        if errors[0]:
+            display_data['errors'] = errors[0]
+            return display_data
+
+        if errors[1][0] > 100:
+            display_data['error'] = 'El porcentaje total debe de ser 100, no más.'
+            return display_data
+
+        await self.create(data, school_term['id'])
+
+        display_data.update({
+            'success': 'Se ha registrado la estructura de notas exitosamente',
+            'can_create_structure': await self.can_create_structure(user['escuela'])
+        })
+
+        return display_data
+
+    async def validate(self, data: dict):
+        rules = list()
+        percentage = [0.0]
+
+        for k, v in data.items():
+            rules.append(['Nombre de grupo {}'.format(k), v['name'], 'len:6,32'])
+
+            for i, grade in enumerate(v['grades']):
+                rules.append(['Nombre de nota {} de grupo {}'.format(i + 1, k), grade[0], 'len:2,32'])
+                rules.append(['Porcentaje de nota {} de grupo {}'.format(i + 1, k),
+                              grade[1], 'numeric|len:1,4|custom', self._hacky_sum, percentage])
+
+        return await validator.validate([
+            *rules
+        ], self.request.app.db), percentage
+
+    async def create(self, data: dict, school_term: int):
+        async with self.request.app.db.acquire() as connection:
+            async with connection.transaction():
+                for k, v in data.items():
+                    group = await connection.fetchval('''
+                        INSERT INTO grupo_notas (descripcion)
+                        VALUES ($1)
+                        RETURNING id
+                    ''', v['name'])
+
+                    for grade in enumerate(v['grades']):
+                        _grade = await connection.fetchval('''
+                            INSERT INTO nota (grupo_id, descripcion, porcentaje)
+                            VALUES ($1, $2, $3)
+                            RETURNING id
+                        ''', group, grade[1][0], Decimal(grade[1][1]))
+
+                        await connection.execute('''
+                            INSERT INTO estructura_notas (ciclo_acad_id, nota_id)
+                            VALUES ($1, $2)
+                        ''', school_term, _grade)
+
+
+
+    @staticmethod
+    async def _hacky_sum(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder,
+                                    percentage: list):
+        percentage[0] += float(value)
+
+    @staticmethod
+    async def get_data(data: dict) -> dict:
+        _data = dict()
+
+        for k, v in data.items():
+            matching_key = GRADES_GROUP.fullmatch(k)
+            matching_grade = GRADE.fullmatch(k)
+
+            if matching_key:
+                _data.update({
+                    matching_key.groups()[0]: {
+                        'name': data[k],
+                        'grades': []
+                    }
+                })
+
+            elif matching_grade:
+                _percentage = 'group_{group}_grade_{grade}_percentage'.format(group=matching_grade.groups()[0],
+                                                                              grade=matching_grade.groups()[1])
+
+                if _percentage not in data.keys():
+                    raise ValueError
+
+                _data[matching_grade.groups()[0]]['grades'].append((data[k], data[_percentage]))
+
+            else:
+                pass
+
+        return _data
+
+    async def can_create_structure(self, school: int) -> Union[bool, int]:
+        school_term = await self.school_term(school)
+
+        if school_term:
+            return False
+
+        return True
+
+    async def fetch_current_school_term(self, school: int):
+        query = '''
+            SELECT id, fecha_comienzo, fecha_fin
+            FROM ciclo_academico
+                WHERE $1 >= fecha_comienzo AND
+                      $1 <= fecha_fin AND
+                      escuela = $2
+                LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), school)
+
+    async def school_term(self, school: int):
+        query = '''            
+            SELECT true
+            FROM ciclo_academico
+            RIGHT JOIN estructura_notas
+                    ON estructura_notas.ciclo_acad_id = ciclo_academico.id
+            WHERE ciclo_academico.fecha_comienzo <= $1 AND
+                  ciclo_academico.fecha_fin >= $1 AND
+                  ciclo_academico.escuela = $2
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(datetime.utcnow() - timedelta(hours=5), school)
+
+
 routes = {
     'school-term': {
         'create': CreateSchoolTerm,
-        'disable-students': DisableStudents
+        'disable-students': DisableStudents,
+        'create-grading-structure': CreateGradingStructure
     }
 }
