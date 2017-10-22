@@ -1,6 +1,6 @@
 from datetime import datetime
-from aiohttp.web import Request
 from aiohttp_session import get_session
+from aiohttp.web import Request, HTTPFound
 
 
 class NotAuthenticated(Exception):
@@ -19,7 +19,7 @@ async def get_auth_data(request: Request) -> dict:
                    nombres, apellidos, sexo,
                    tipo_documento, nacionalidad, escuela,
                    nro_telefono, distrito, direccion,
-                   deshabilitado, avatar,
+                   deshabilitado, avatar, autorizado,
                    rol_usuario.ver_listado_alumnos as perm_ver_listado_alumnos,
                    rol_usuario.ver_reportes_personales as perm_ver_reportes_personales,
                    rol_usuario.ver_notas_de_clase as perm_ver_notas_de_clase,
@@ -82,6 +82,6 @@ async def get_auth_data(request: Request) -> dict:
 
         if not user['autorizado'] or user['deshabilitado']:
             del session['id']
-            raise NotAuthenticated
+            raise HTTPFound('/')
 
         return user

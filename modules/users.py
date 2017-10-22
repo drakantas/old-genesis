@@ -669,6 +669,24 @@ class User(View):
         except KeyError:
             return '{} ingresado no es correcto'
 
+    @staticmethod
+    async def _validate_id(name: str, value: str, pos: int, elems: list, dbi):
+        id_type, len_val = int(elems[pos - 1][1]), len(value)
+
+        if id_type == 0:
+            if not (8 <= len_val < 10):
+                return 'El DNI debe contener 8 o 9 caracteres'
+        elif id_type == 1:
+            if len_val != 12:
+                return 'El Carné de extranjería debe contener 12 caracteres'
+        else:
+            return 'Ingrese un tipo de documento correcto'
+
+    @staticmethod
+    async def _validate_document_type(name: str, value: str, *args):
+        if value not in ('0', '1'):
+            return '{} debe de ser 0 ó 1'.format(name)
+
 
 class EditUser(User):
     @view('user.edit')
@@ -784,6 +802,83 @@ class EditUser(User):
         ])
 
 
+class AdminRegisterUser(User):
+    @view('user.admin_register')
+    @permission_required('mantener_usuarios')
+    async def get(self, user: dict):
+        return {'schools': data_map['schools'],
+                'sexes': data_map['sexes'],
+                'districts': data_map['districts'],
+                'nationalities': data_map['nationalities'],
+                'roles': await self.get_roles(),
+                '_authorized': data_map['authorized'],
+                '_disabled': data_map['disabled']}
+
+    @view('user.admin_register')
+    @permission_required('mantener_usuarios')
+    async def post(self, user: dict):
+        display_data = {
+            'schools': data_map['schools'],
+            'sexes': data_map['sexes'],
+            'districts': data_map['districts'],
+            'nationalities': data_map['nationalities'],
+            'roles': await self.get_roles(),
+            '_authorized': data_map['authorized'],
+            '_disabled': data_map['disabled']
+        }
+
+        data = await self.request.post()
+
+        if not check_form_data(data, 'name', 'last_name', 'email', 'password', 'role', 'sex',
+                               'phone', 'district', 'nationality', 'authorized', 'disabled',
+                               'address', 'id', 'id_type'):
+            display_data.update({'error': 'Parámetros enviados no son los requeridos...'})
+            return display_data
+
+        errors = await self.validate(data)
+
+        if errors:
+            display_data.update({'errors': errors})
+            return display_data
+
+        await self.create(data, user)
+
+        display_data.update({'success': 'Se ha creado al usuario exitosamente'})
+        return display_data
+
+    async def create(self, data: dict, user: dict):
+        statement = '''
+            INSERT INTO usuario
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+        '''
+        now = datetime.utcnow() - timedelta(hours=5)
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute(statement, int(data['id']), int(data['role']), data['email'],
+                                            hashpw(data['password'].encode('utf-8'), gensalt()).decode('utf-8'),
+                                            data['name'], data['last_name'], int(data['sex']), int(data['id_type']),
+                                            data['nationality'], user['escuela'], int(data['phone']),
+                                            int(data['district']), data['address'], None, now, now,
+                                            bool(int(data['authorized'])), bool(int(data['disabled'])))
+
+    async def validate(self, data: dict):
+        return await validator.validate([
+            ['Tipo de documento', data['id_type'], 'digits|len:1|custom', self._validate_document_type],
+            ['DNI o Carné de extranjería', data['id'], 'digits|custom|unique:id<int>,usuario', self._validate_id],
+            ['Contraseña', data['password'], 'len:8,16|password'],
+            ['Nombres', data['name'], 'len:8,64'],
+            ['Apellidos', data['last_name'], 'len:8,64'],
+            ['Correo electrónico', data['email'], 'len:14,128|email|unique:correo_electronico,usuario'],
+            ['Rol', data['role'], 'digits|len:1|custom', self._validate_role],
+            ['Sexo', data['sex'], 'digits|len:1|custom', self._validate_sex],
+            ['Número de teléfono', data['phone'], 'digits|len:9'],
+            ['Dirección', data['address'], 'len:8,64'],
+            ['Distrito', data['district'], 'digits|len:1,2|custom', self._validate_district],
+            ['Nacionalidad', data['nationality'], 'letters|len:2|custom', self._validate_nationality],
+            ['Autorizado', data['authorized'], 'digits|len:1|custom', self._validate_authorized],
+            ['Deshabilitado', data['disabled'], 'digits|len:1|custom', self._validate_disabled]
+        ], self.request.app.db)
+
+
 class RemoveAvatar(User):
     @pass_user
     @permission_required('mantener_usuarios')
@@ -857,6 +952,7 @@ routes = {
     'users/{user:[1-9][0-9]*}/edit': EditUser,
     'users/{user:[1-9][0-9]*}/remove-avatar': RemoveAvatar,
     'users/{user:[1-9][0-9]*}/register-student': RegisterStudent,
+    'users/create-new': AdminRegisterUser,
     'profile/{_user_id:[0-9]+}': ReadProfile,
     'upload-application': UploadApplication,
     '/': Welcome
