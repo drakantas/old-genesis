@@ -59,7 +59,7 @@ class Login(View):
     @staticmethod
     async def validate(id_: str, password: str):
         return await validator.validate([
-            ['DNI o Carné de extranjería', id_, 'digits|len:9,12'],
+            ['DNI o Carné de extranjería', id_, 'digits|len:8,12'],
             ['Contraseña', password, 'len:8,16']
         ])
 
