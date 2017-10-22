@@ -16,7 +16,7 @@ roles_data = Path(roles_data)
 
 
 async def get_data(path: Path) -> list:
-    with open(path, 'rb') as f:
+    with open(str(path), 'rb') as f:
         return await JSON.decode(f.read().decode('utf-8'))
 
 
