@@ -25,29 +25,38 @@
                     </div>
                 {% endif %}
             {% endif %}
+            {% if not can_register_attendance %}
+            <div class="alert alert-danger" role="alert">
+                Ahora mismo no puedes registrar las asistencias.
+            </div>
+            {% else %}
+            <div class="alert alert-success" role="alert">
+               Puedes registrar las asistencias.
+            </div>
+            {% endif %}
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th><input type="checkbox" id="select_all"></th>
-                        <th>#</th>
-                        <th>Apellidos y nombres</th>
-                        <th>DNI</th>
-                        <th>Observación</th>
+                        <th width="5%"><input type="checkbox" id="select_all"></th>
+                        <th width="5%">#</th>
+                        <th width="35%">Apellidos y nombres</th>
+                        <th width="35%">DNI o Carné de extranjería</th>
+                        <th width="20%">Observación</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for student in students %}
                         <tr>
-                            <td><input type="checkbox" name="student_{{ student.id }}" checked></td>
-                            <td>{{ loop.index }}</td>
-                            <td>{{ student.apellidos }} {{ student.nombres }}</td>
-                            <td>{{ student.id }}</td>
-                            <td>
+                            <td width="5%"><input type="checkbox" name="student_{{ student.id }}" checked></td>
+                            <td width="5%">{{ loop.index }}</td>
+                            <td width="35%">{{ student.apellidos }} {{ student.nombres }}</td>
+                            <td width="35">{{ student.id }}</td>
+                            <td width="20%">
                                 <select class="form-control" name="additional_{{ student.id }}">
                                     <option value="Desastre natural">Desastre natural</option>
                                     <option value="Accidente">Accidente</option>
                                     <option value="Visita médica">Visita médica</option>
-                                    <option>Otro</option>
+                                    <option value="" selected>Ninguna</option>
                                 </select>
                             </td>
                         </tr>

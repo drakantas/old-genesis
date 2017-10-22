@@ -1,9 +1,9 @@
-from datetime import datetime
-from typing import Generator
+from typing import Generator, Union
+from datetime import datetime, timedelta
 from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, json_response, HTTPUnauthorized
 
-from utils.map import map_users
+from utils.map import map_users, parse_data_key
 from utils.helpers import view, flatten, pass_user, permission_required, school_term_to_str, schedule_to_str
 
 
@@ -290,32 +290,103 @@ class RegisterAttendance(View):
     @permission_required('registrar_asistencia')
     async def get(self, user: dict):
         students = await self.fetch_students(user['escuela'], self.request.app.db)
-        schedule = await self.fetch_teacher_schedule(user['id'], self.request.app.db)
+        can_register_attendance = await self.can_register_attendance(user['id'], user['escuela'])
 
-        return {'schedule': schedule,
-                'students': students}
+        return {'students': students,
+                'can_register_attendance': can_register_attendance}
 
     @view('attendance.register')
     @permission_required('registrar_asistencia')
     async def post(self, user: dict):
         students = await self.fetch_students(user['escuela'], self.request.app.db)
-        schedule = await self.fetch_teacher_schedule(user['id'], self.request.app.db)
+        can_register_attendance = await self.can_register_attendance(user['id'], user['escuela'])
 
-        if not schedule:
-            raise ValueError
+        display_data = {
+            'students': students,
+            'can_register_attendance': can_register_attendance
+        }
+
+        if not can_register_attendance:
+            display_data.update({'result': False})
+            return display_data
 
         data = dict(await self.request.post())
         data = await self.convert_data(data, students)
-        data = await self.format_data(data, schedule)
+        data = await self.format_data(data, can_register_attendance)
 
         result = await self.register_attendance(data, self.request.app.db)
 
         if isinstance(result, list):
-            result = True
+            display_data.update({'result': True})
+        else:
+            display_data.update({'result': False})
 
-        return {'schedule': schedule,
-                'students': students,
-                'result': result}
+        return display_data
+
+    async def can_register_attendance(self, teacher: int, school_term: int) -> Union[bool, int]:
+        async with self.request.app.db.acquire() as connection:
+            schedules = await (await connection.prepare('''
+                SELECT horario_profesor.dia_clase as dia, horario_profesor.hora_comienzo as comienzo,
+                       horario_profesor.hora_fin as fin, horario_profesor.id
+                FROM horario_profesor
+                WHERE horario_profesor.ciclo_id = $1 AND
+                      horario_profesor.profesor_id = $2
+            ''')).fetch(school_term, teacher)
+
+            if not schedules:
+                return False
+
+            now = datetime.utcnow() - timedelta(hours=5)
+
+            for schedule in schedules:
+                _day = parse_data_key(schedule['dia'], 'isoweekdays')
+
+                if _day != now.weekday():
+                    continue
+
+                start = int(schedule['comienzo'] / 100), schedule['comienzo'] % 100
+                end = int(schedule['fin'] / 100), schedule['fin'] % 100
+
+                if not start[0] <= now.hour <= end[0]:
+                    continue
+                else:
+                    if start[0] == now.hour == end[0]:
+                        if start[1] <= now.minute <= end[1]:
+                            if await self.check_registered_attendance(schedule['id'], start, end):
+                                return False
+                            else:
+                                return schedule['id']
+                        else:
+                            continue
+                    elif start[0] < now.hour < end[0]:
+                        if await self.check_registered_attendance(schedule['id'], start, end):
+                            return False
+                        else:
+                            return schedule['id']
+                    else:
+                        return False
+
+            return False
+
+    async def check_registered_attendance(self, schedule: int, start: tuple, end: tuple):
+        start_ = await self.get_datetime(start)
+        end_ = await self.get_datetime(end)
+
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT true
+                FROM asistencia
+                WHERE horario_id = $1 AND
+                      fecha_registro >= $2 AND
+                      fecha_registro <= $3
+                LIMIT 1
+            ''')).fetchval(schedule, start_, end_) or False
+
+    @staticmethod
+    async def get_datetime(time_: tuple):
+        now = datetime.utcnow() - timedelta(hours=5)
+        return now.replace(hour=time_[0], minute=time_[1], second=0, microsecond=0)
+
 
     @staticmethod
     async def convert_data(data: dict, students: list) -> list:
@@ -341,9 +412,9 @@ class RegisterAttendance(View):
         return new_data
 
     @staticmethod
-    async def format_data(data: list, schedule: dict) -> list:
-        current_time = datetime.utcnow()
-        return [[s[0], schedule['id'], current_time, s[1], s[2]] for s in data]
+    async def format_data(data: list, schedule: int) -> list:
+        current_time = datetime.utcnow() - timedelta(hours=5)
+        return [[s[0], schedule, current_time, s[1], s[2]] for s in data]
 
     @staticmethod
     async def register_attendance(data: list, dbi: PoolConnectionHolder):
@@ -361,37 +432,29 @@ class RegisterAttendance(View):
                 return await connection.fetch(query)
 
     @staticmethod
-    async def fetch_students(school: int,  dbi: PoolConnectionHolder, role: int = 1):
+    async def fetch_students(school: int,  dbi: PoolConnectionHolder):
         query = '''
-            SELECT id, nombres, apellidos
+            WITH ciclo_academico AS (
+                SELECT ciclo_academico.id
+                FROM ciclo_academico
+                WHERE ciclo_academico.fecha_comienzo <= $1 AND
+                      ciclo_academico.fecha_fin >= $1 AND
+                      ciclo_academico.escuela = $2
+                LIMIT 1
+            )
+            
+            SELECT usuario.id, usuario.nombres, usuario.apellidos
             FROM usuario
-            WHERE rol_id = $1 AND
-                  escuela = $2
+            INNER JOIN matricula
+                    ON matricula.estudiante_id = usuario.id AND
+                       matricula.ciclo_acad_id = (SELECT id FROM ciclo_academico)
+            WHERE usuario.rol_id = 1 AND
+                  usuario.escuela = $2 AND
+                  matricula.ciclo_acad_id = (SELECT id FROM ciclo_academico)
             ORDER BY apellidos ASC
         '''
         async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetch(role, school)
-
-    @staticmethod
-    async def fetch_teacher_schedule(teacher: int, dbi: PoolConnectionHolder):
-        query = '''
-            WITH ciclo_acad AS (
-                SELECT id
-                FROM ciclo_academico
-                WHERE $1 >= fecha_comienzo AND
-                      $1 <= fecha_fin
-                LIMIT 1
-            )
-            SELECT horario_profesor.id, ciclo_id, profesor_id, dia_clase, hora_comienzo, hora_fin
-            FROM horario_profesor
-            LEFT JOIN ciclo_academico
-                   ON ciclo_academico.id = horario_profesor.ciclo_id
-            WHERE ciclo_id = (SELECT id FROM ciclo_acad) AND
-                  profesor_id = $2
-            LIMIT 1
-        '''
-        async with dbi.acquire() as connection:
-            return await (await connection.prepare(query)).fetchrow(datetime.utcnow(), teacher)
+            return await (await connection.prepare(query)).fetch(datetime.utcnow() - timedelta(hours=5), school)
 
 
 class DetailedReport(View):
