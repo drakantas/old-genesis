@@ -2,6 +2,39 @@
 
 {% block project_page %}
     <div class="content_wrapper padded">
-        hehe
+        <h3 style="margin-top:0;">Archivos de proyecto</h3>
+        <hr class="divider" />
+        {% if not files %}
+        <div class="alert alert-warning">
+            No se han subido archivos para este proyecto, aún.
+        </div>
+        {% else %}
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Archivo</th>
+                    <th>Subido por</th>
+                    <th>Fecha de carga</th>
+                    <th>Descargar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in files %}
+                <tr>
+                    <td width="32%">{{ file.nombre_archivo }}</td>
+                    <td width="33%">{{ file.autor_nombres }} {{ file.autor_apellidos }}</td>
+                    <td width="20%">{{ file.fecha_subido }}</td>
+                    <td class="text-center" width="15%">
+                        {% if is_member %}
+                        <a class="btn btn-success btn-sm" href="/projects/my-project/download-file/{{ file.id }}" target="_blank"><span class="glyphicon glyphicon-download-alt"></span> Descargar</a>
+                        {% else %}
+                        <a class="btn btn-success btn-sm" href="/projects/{{ project.id }}/download-file/{{ file.id }}" target="_blank"><span class="glyphicon glyphicon-download-alt"></span> Descargar</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
     </div>
 {% endblock %}

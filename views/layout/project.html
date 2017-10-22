@@ -15,11 +15,11 @@
         <hr class="divider">
         <div class="row">
             <div class="col-md-9">
-                <h2 style="margin-top:0;">{{ project.titulo }} {% if is_member %}<a href="/projects/{{ project.id }}/settings" class="btn btn-default btn-sm">Configuración de proyecto</a>{% endif %}</h2>
+                <h2 style="margin-top:0;">{{ project.titulo }} {% if is_member %}<a href="/projects/my-project/settings" class="btn btn-default btn-sm">Configuración de proyecto</a>{% endif %}</h2>
             </div>
             <div class="col-md-3 text-right">
                 {% if is_member %}
-                <a href="/projects/{{ project.id }}/add-file" class="btn btn-primary btn-lg">Agregar archivo</a>
+                <a href="/projects/my-project/add-file" class="btn btn-primary btn-lg">Agregar archivo</a>
                 {% endif %}
             </div>
         </div>

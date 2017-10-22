@@ -1,0 +1,31 @@
+{% extends "layout/project.html" %}
+
+{% block project_page %}
+    <div class="content_wrapper padded">
+        <h3 style="margin-top:0;" ><a href="/projects/my-project/files" class="btn btn-default btn-sm" style="border-radius:50%;width:24px;height:24px;padding-left:0;padding-right:0;padding-top:3px;padding-bottom:3px;"><span class="glyphicon glyphicon-menu-left"></span></a> Agregar archivo</h3>
+        <hr class="divider" />
+        {% if error is defined %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+        {% endif %}
+        {% if success is defined %}
+        <div class="alert alert-success">
+            {{ success }}
+        </div>
+        {% endif %}
+        <form method="POST" accept-charset="utf-8" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Seleccionar archivo</label>
+                <input type="file" name="file" class="form-control" id="file" />
+            </div>
+            <div class="form-group">
+                <label for="description">Descripción</label>
+                <textarea rows="5" id="description" name="description" class="form-control" placeholder="Descripción" style="resize:none;"></textarea>
+            </div>
+            <div class="text-right">
+                <button type="submit" class="btn btn-success">Agregar</button>
+            </div>
+        </form>
+    </div>
+{% endblock %}

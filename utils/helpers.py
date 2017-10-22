@@ -1,13 +1,13 @@
 from asyncpg import Record
 from decimal import Decimal
-from typing import Union, List, Dict
-from aiohttp_session import get_session
 from datetime import datetime
+from aiohttp_session import get_session
+from typing import Union, List, Dict, Generator
 from aiohttp_jinja2 import template as jinja2_template
 from aiohttp.web import View, HTTPUnauthorized, HTTPFound
 
-from utils.auth import get_auth_data, NotAuthenticated
 from utils.map import parse_data_key
+from utils.auth import get_auth_data, NotAuthenticated
 
 
 same_year_st = '{year} {month1}-{month2}'
@@ -205,6 +205,20 @@ def _time_to_str(time: int) -> str:
         hours = '0' + hours
 
     return '{hours}:{minutes} {period}'.format(hours=hours, minutes=minutes, period=period)
+
+
+def get_chunks(cluster: bytes, chunk_size: int = 8192) -> Generator:
+    cluster_length = len(cluster)
+    chunk_amount = int(cluster_length / chunk_size)
+    last_chunk = cluster_length % chunk_size
+
+    if chunk_amount != 0:
+        for chunk in range(0, chunk_amount):
+            grab = chunk * chunk_size
+            yield cluster[grab:grab + chunk_size]
+
+    if last_chunk != 0:
+        yield cluster[-1 * last_chunk:]
 
 
 class PermissionNotFound(Exception):

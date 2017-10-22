@@ -20,6 +20,7 @@ def upgrade():
     op.create_table('archivo_proyecto',
                     sa.Column('archivo_id', sa.Integer, primary_key=True),
                     sa.Column('proyecto_id', sa.Integer, primary_key=True),
+                    sa.Column('descripcion', sa.String(256), nullable=False),
                     sa.Column('subido_por', sa.BigInteger, nullable=False))
 
     op.create_foreign_key('archivo_id_fk',

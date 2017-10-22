@@ -262,7 +262,7 @@ class UpdateAvatar(View):
 
             size += len(chunk)
 
-            if size >= 2 * 1024 * 1024:  # 5 MiB
+            if size > 2 * 1024 * 1024:  # 5 MiB
                 del _avatar
                 size_error = True
                 break

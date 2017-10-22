@@ -1,12 +1,13 @@
 from html import escape
-from datetime import datetime
-from aiohttp.web import View, HTTPNotFound, json_response, HTTPUnauthorized, HTTPFound
-from asyncpg.pool import PoolConnectionHolder
 from typing import Generator
+from datetime import datetime, timedelta
+from asyncpg.pool import PoolConnectionHolder
+from aiohttp.web import View, HTTPNotFound, json_response, StreamResponse, HTTPUnauthorized, HTTPFound
 
 
 from utils.validator import validator
-from utils.helpers import view, permission_required, flatten, school_term_to_str, pass_user, check_form_data
+from utils.map import data_map, parse_data_key
+from utils.helpers import view, permission_required, flatten, school_term_to_str, pass_user, check_form_data, get_chunks
 
 
 _datetime = '%m/%d/%Y %I:%M %p'
@@ -658,6 +659,86 @@ class ProjectOverview(Project):
                 'location': 'overview'}
 
 
+class EditProjectSettings(Project):
+    @view('projects.settings')
+    async def get(self, user: dict):
+        if self.request.match_info['project'] != 'my-project':
+            raise HTTPNotFound
+
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+
+        return {'project': project,
+                'members': members,
+                'is_member': await self.is_member(user, members),
+                'location': 'overview'}
+
+    @view('projects.settings')
+    async def post(self, user: dict):
+        if self.request.match_info['project'] != 'my-project':
+            raise HTTPNotFound
+
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+        display_data = {
+            'project': project,
+            'members': members,
+            'is_member': await self.is_member(user, members),
+            'location': 'overview'
+        }
+
+        data = await self.request.post()
+
+        if not check_form_data(data, 'title', 'line_of_research', 'description'):
+            display_data.update({'error': 'No se recibieron los parámetros necesarios'})
+            return display_data
+
+        errors = await self.validate(data, project['id'], project['ciclo_id'])
+
+        if errors:
+            display_data.update({'errors': errors})
+            return display_data
+
+        await self.update(data, project['id'])
+
+        display_data.update({'success': 'Se ha actualizado el proyecto exitosamente',
+                             'project': await self.get_project(user)})
+        return display_data
+
+    async def validate(self, data: dict, project: int, school_term: int):
+        return await validator.validate([
+            ['Título', data['title'], 'len:16,128|custom', self._validate_title, project, school_term],
+            ['Línea de investigación', data['line_of_research'], 'len:16,128'],
+            ['Descripción', data['description'], 'len:32,512']
+        ], self.request.app.db)
+
+    async def update(self, data: dict, project: int):
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute('''
+                UPDATE proyecto
+                SET titulo = $1,
+                    linea_investigacion = $2,
+                    descripcion = $3
+                WHERE id = $4
+            ''', data['title'], data['line_of_research'], data['description'], project)
+
+    @staticmethod
+    async def _validate_title(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder, project: int,
+                              school_term: int):
+        async with dbi.acquire() as connection:
+            in_use = await (await connection.prepare('''
+                SELECT true
+                FROM proyecto
+                WHERE proyecto.titulo = $1 AND
+                      proyecto.id != $2 AND
+                      proyecto.ciclo_acad_id = $3
+                LIMIT 1
+            ''')).fetchval(value, project, school_term) or False
+
+        if in_use:
+            return '{} `{}` ya se encuentra en uso'.format(name, value)
+
+
 class ProjectReviews(Project):
     @view('projects.reviews')
     async def get(self, user: dict):
@@ -677,11 +758,198 @@ class ProjectFiles(Project):
     async def get(self, user: dict):
         project = await self.get_project(user)
         members = await self.get_members(project)
+        files = flatten(await self.get_files(project['id']), {})
 
         return {'project': project,
                 'members': members,
                 'is_member': await self.is_member(user, members),
+                'files': files,
                 'location': 'files'}
+
+    async def get_files(self, project: int):
+        query = '''
+            SELECT CONCAT(archivo.nombre, '.', archivo.ext) as nombre_archivo,
+                   archivo.fecha_subido, archivo_proyecto.descripcion,
+                   usuario.nombres as autor_nombres, usuario.apellidos as autor_apellidos,
+                   archivo.id
+            FROM archivo_proyecto
+            INNER JOIN archivo
+                    ON archivo.id = archivo_proyecto.archivo_id
+            LEFT JOIN usuario
+                   ON usuario.id = archivo_proyecto.subido_por
+            WHERE archivo_proyecto.proyecto_id = $1
+            ORDER BY archivo.fecha_subido DESC
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetch(project)
+
+
+class UploadFile(Project):
+    @view('projects.upload_file')
+    async def get(self, user: dict):
+        if self.request.match_info['project'] != 'my-project':
+            raise HTTPNotFound
+
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+        now = flatten([datetime.utcnow() - timedelta(hours=5)], {})[0]
+
+        return {'project': project,
+                'members': members,
+                'is_member': await self.is_member(user, members),
+                'location': 'files',
+                'now': now}
+
+    @view('projects.upload_file')
+    async def post(self, user: dict):
+        if self.request.match_info['project'] != 'my-project':
+            raise HTTPNotFound
+
+        project = await self.get_project(user)
+        members = await self.get_members(project)
+        now = datetime.utcnow() - timedelta(hours=5)
+
+        display_data = {
+            'project': project,
+            'members': members,
+            'is_member': await self.is_member(user, members),
+            'location': 'files',
+            'now': flatten([now], {})[0]
+        }
+
+        reader = await self.request.multipart()
+
+        file = await reader.next()
+
+        if file is None:
+            display_data.update({'error': 'No se recibieron los parámetros necesarios.'})
+            return display_data
+
+        if file.headers['Content-Type'] not in data_map['files'].values():
+            display_data.update({'error': 'El archivo debe de ser un PDF o Windows Office Doc.'})
+            return display_data
+
+        file_size = 0
+        _file = None
+        size_error = False
+
+        while True:
+            chunk = await file.read_chunk()
+
+            if not chunk:
+                break
+
+            if _file is None:
+                _file = chunk
+            else:
+                _file = _file + chunk
+
+            file_size += len(chunk)
+
+            if file_size > 7 * 1024 * 1024:
+                size_error = True
+                break
+
+        if size_error:
+            del _file, file_size
+            display_data.update({'error': 'El archivo no puede pesar más de 7MiB'})
+            return display_data
+
+        description = await reader.next()
+
+        if description is None:
+            del _file, file_size, size_error
+            display_data.update({'error': 'No se recibieron los parámetros necesarios.'})
+            return display_data
+
+        description = await description.text()
+        desc_error = await self.validate_description(description)
+
+        if desc_error:
+            del _file, file_size, size_error
+            display_data.update({'error': desc_error[0]})
+            return display_data
+
+        file_details = file.filename.rsplit('.', 1)
+
+        if _file is not None:
+            _file = bytearray(_file)
+        else:
+            _file = bytearray()
+
+        await self.create(file_details, _file, project['id'], user['id'], now, description)
+
+        display_data.update({'success': 'Se ha subido el archivo {} exitosamente.'.format(file.filename)})
+        return display_data
+
+    @staticmethod
+    async def validate_description(description: str):
+        return await validator.validate([
+            ['Descripción', description, 'len:16,256']
+        ])
+
+    async def create(self, file_details: list, file_content: bytearray, project: int, uploaded_by: int,
+                     upload_date: datetime, description: str):
+        statement = '''
+            WITH archivo AS (
+                INSERT INTO archivo (nombre, ext, contenido, fecha_subido)
+                VALUES ($1, $2, $3, $6)
+                RETURNING id
+            )
+            INSERT INTO archivo_proyecto (archivo_id, proyecto_id, subido_por, descripcion)
+            VALUES ((SELECT id FROM archivo), $4, $5, $7)
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute(statement, *file_details, file_content, project, uploaded_by, upload_date,
+                                            description)
+
+
+class DownloadFile(Project):
+    @pass_user
+    async def get(self, user: dict):
+        project = await self.get_project(user)
+        file = int(self.request.match_info['file'])
+
+        file = await self.fetch_file(project['id'], file)
+
+        if not file:
+            raise HTTPNotFound
+
+        headers = {
+            'Content-Type': parse_data_key(file['ext'], 'files'),
+            'Content-Disposition': 'attachment; filename={file}'.format(file=file['nombre'])
+        }
+
+        response = StreamResponse(status=200, reason='OK', headers=headers)
+
+        chunks = tuple(get_chunks(file['contenido']))
+
+        await response.prepare(self.request)
+
+        for i in range(0, len(chunks)):
+            try:
+                response.write(chunks[i])
+
+                await response.drain()
+            except Exception as e:
+                print(repr(e))
+
+        del file, chunks
+        return response
+
+    async def fetch_file(self, project: int, file: int):
+        query = '''
+            SELECT CONCAT(archivo.nombre, '.', archivo.ext) as nombre,
+                   archivo.contenido, archivo.ext
+            FROM archivo_proyecto
+            INNER JOIN archivo
+                    ON archivo.id = archivo_proyecto.archivo_id
+            WHERE archivo_proyecto.proyecto_id = $1 AND
+                  archivo_proyecto.archivo_id = $2
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchrow(project, file)
 
 
 class ProjectPresentation(Project):
@@ -956,7 +1224,10 @@ routes = {
             'review/{review:[1-9][0-9]*}': SingleReview,
             'assign-review': AssignReviewer,
             'assign-presentation': AssignPresentationDate,
-            'accept-invite': AcceptInvite
+            'accept-invite': AcceptInvite,
+            'settings': EditProjectSettings,
+            'add-file': UploadFile,
+            'download-file/{file:[1-9][0-9]*}': DownloadFile
         },
         'pending-reviews': PendingReviewsList,
         'list': ProjectsList,
