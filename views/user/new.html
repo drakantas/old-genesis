@@ -1,73 +1,105 @@
 {% extends "layout/auth.html" %}
 
 {% block content %}
-<form class="form-horizontal" method="POST" accept-charset="utf-8" enctype="multipart/form-data">
-    {% if errors %}
-    <div class="alert alert-danger" role="alert">
-        <ul>
-            {% for error in errors %}
-            <li>{{ error }}</li>
-            {% endfor %}
-        </ul>
+{% if errors is defined %}
+<div class="alert alert-danger" role="alert">
+    <ul>
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% if error is defined %}
+<div class="alert alert-danger">
+    {{ error }}
+</div>
+{% endif %}
+{% if success is defined %}
+<div class="alert alert-success" role="alert">
+    {{ success }}
+</div>
+{% endif %}
+{% if not errors and not success %}
+<div class="alert alert-warning" role="alert">
+    <span class="glyphicon glyphicon-info-sign"></span> <strong>Información</strong><br />
+    <ul>
+        <li>Primero, deberás de seleccionar un archivo y luego presionar la opción "Subir".</li>
+        <li>El archivo a subir debe de ser un Word o un PDF, y no pesar más de 3MBs.</li>
+        <li>En este archivo, deberás de tener escaneado el voucher de registro e información adicional para facilitar tu registro.</li>
+        <li>Una vez subido el archivo, deberás de proceder a llenar los otros datos.</li>
+        <li>Todos los campos son obligatorios.</li>
+    </ul>
+</div>
+{% endif %}
+<form method="POST" action="/upload-application" accept-charset="utf-8" enctype="multipart/form-data">
+    <div class="row">
+        {% if file is not defined %}
+        <div class="col-md-9">
+            <div class="form-group">
+                <label for="application">Adjuntar documento</label>
+                <input type="file" name="application" id="application" class="form-control" />
+            </div>
+        </div>
+        <div class="col-md-3 text-center" style="padding-top:25px;">
+            <button type="submit" class="btn btn-success btn-block" style="margin-bottom:15px;">Subir</button>
+        </div>
+        {% else %}
+        <div class="col-sm-12">
+            <strong>Documento adjunto</strong> {{ file }}
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
-    {% if success %}
-    <div class="alert alert-success" role="alert">
-        {{ success }}
-    </div>
-    {% endif %}
-    {% if not errors and not success %}
-    <div class="alert alert-info" role="alert">
-        <span class="glyphicon glyphicon-info-sign"></span> Detalles adicionales deberán ser ingresados una vez sea aprobado tu registro. <br>
-        Todos los campos son obligatorios.<br>
-        El documento adjuntado no ha de pesar más de 3MiBs. Solo se aceptan las extensiones: pdf y docx.
-    </div>
-    {% endif %}
+</form>
+
+<hr class="divider" />
+
+<form class="form-horizontal" method="POST" action="/register">
     <div class="form-group">
         <label for="name" class="col-sm-3 control-label">Nombres</label>
         <div class="col-sm-9">
-            <input class="form-control" id="name" name="name" placeholder="Nombres completos">
+            <input class="form-control" id="name" name="name" placeholder="Nombres completos" value="{% if data is defined and data.name %}{{ data.name }}{% endif %}">
         </div>
     </div>
     <div class="form-group">
         <label for="last_name" class="col-sm-3 control-label">Apellidos</label>
         <div class="col-sm-9">
-            <input class="form-control" id="last_name" name="last_name" placeholder="Apellidos completos">
+            <input class="form-control" id="last_name" name="last_name" placeholder="Apellidos completos" value="{% if data is defined and data.last_name %}{{ data.last_name }}{% endif %}">
         </div>
     </div>
     <div class="form-group">
         <label for="email" class="col-sm-3 control-label">Correo electrónico</label>
         <div class="col-sm-9">
-            <input class="form-control" id="email" name="email" placeholder="Correo electrónico">
+            <input class="form-control" id="email" name="email" placeholder="Correo electrónico" value="{% if data is defined and data.email %}{{ data.email }}{% endif %}">
         </div>
     </div>
     <div class="form-group">
         <label for="id_type" class="col-sm-3 control-label">Tipo de documento</label>
         <div class="col-sm-9">
             <select class="form-control" id="id_type" name="id_type">
-                <option value="0" selected>DNI</option>
-                <option value="1">Carné de extranjería</option>
+                <option value="0" {% if data is not defined or data.id_type == 0|string %}selected{% endif %}>DNI</option>
+                <option value="1" {% if data is defined and data.id_type == 1|string %}selected{% endif %}>Carné de extranjería</option>
             </select>
         </div>
     </div>
     <div class="form-group">
         <label for="id" class="col-sm-3 control-label">DNI ó Carné de extranjería</label>
         <div class="col-sm-9">
-            <input class="form-control" id="id" name="id" placeholder="DNI ó Carné de extranjería">
+            <input class="form-control" id="id" name="id" placeholder="DNI ó Carné de extranjería" value="{% if data is defined and data['id'] %}{{ data['id'] }}{% endif %}">
         </div>
     </div>
     <div class="form-group">
         <label for="school" class="col-sm-3 control-label">Escuela</label>
         <div class="col-sm-9">
             <select class="form-control" id="school" name="school">
-                <option value="1">Computación y sistemas</option>
-                <option value="2">Industrial</option>
-                <option value="3">Civil</option>
-                <option value="4">Arquitectura</option>
-                <option value="5">Electrónica</option>
-                <option value="6">Derecho</option>
-                <option value="7">Medicina</option>
-                <option value="8">Aeronáutica</option>
+                <option value="1" {% if data is not defined or data.school == 1|string %}selected{% endif %}>Computación y sistemas</option>
+                <option value="2" {% if data is defined and data.school == 2|string %}selected{% endif %}>Industrial</option>
+                <option value="3" {% if data is defined and data.school == 3|string %}selected{% endif %}>Civil</option>
+                <option value="4" {% if data is defined and data.school == 4|string %}selected{% endif %}>Arquitectura</option>
+                <option value="5" {% if data is defined and data.school == 5|string %}selected{% endif %}>Electrónica</option>
+                <option value="6" {% if data is defined and data.school == 6|string %}selected{% endif %}>Derecho</option>
+                <option value="7" {% if data is defined and data.school == 7|string %}selected{% endif %}>Medicina</option>
+                <option value="8" {% if data is defined and data.school == 8|string %}selected{% endif %}>Aeronáutica</option>
             </select>
         </div>
     </div>
@@ -84,14 +116,10 @@
         </div>
     </div>
     <div class="form-group">
-        <label for="attach_doc" class="col-sm-3 control-label">Adjuntar documento</label>
-        <div class="col-sm-9">
-            <input type="file" class="form-control" id="attach_doc" name="attach_doc">
-        </div>
-    </div>
-    <div class="form-group">
         <div class="text-center">
-            <button class="btn btn-default">Registrarme</button>
+            <div class="col-sm-offset-3 col-sm-9">
+                <button class="btn btn-success btn-lg btn-block">Registrar</button>
+            </div>
         </div>
     </div>
 </form>

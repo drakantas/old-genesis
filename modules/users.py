@@ -1,15 +1,14 @@
-from typing import Union
 from base64 import b64encode
-from datetime import datetime
 from aiohttp_jinja2 import template
 from aiohttp_session import get_session
+from datetime import datetime, timedelta
 from bcrypt import hashpw, checkpw, gensalt
 from asyncpg.pool import PoolConnectionHolder
 from aiohttp.web import View, web_request, HTTPFound, HTTPNotFound
 
-from utils.map import map_users
 from utils.validator import validator
-from utils.helpers import pass_user, view, logged_out
+from utils.map import map_users, parse_data_key, data_map
+from utils.helpers import pass_user, view, logged_out, check_form_data
 
 
 class FailedAuth(Exception):
@@ -91,80 +90,84 @@ class Registration(View):
     @logged_out
     @template('user/new.html')
     async def get(self) -> dict:
-        return {'location': 'registration'}
+        display_data = {'location': 'registration'}
+
+        session = await get_session(self.request)
+
+        if 'app' in session:
+            display_data.update({'file': session['app']['filename']})
+
+        return display_data
 
     @logged_out
     @template('user/new.html')
     async def post(self) -> dict:
         display_data = {'location': 'registration'}
 
+        session = await get_session(self.request)
+
+        if 'app' not in session:
+            display_data.update({'error': 'Debes de primero subir el archivo.'})
+            return display_data
+
+        display_data.update({'file': session['app']['filename']})
+        file_id = session['app']['id']
+
         data = await self.request.post()
 
-        name, last_name, email = data['name'], data['last_name'], data['email']
-        id_type, id_ = data['id_type'], data['id']
-        password, r_password = data['password'], data['repeat_password']
-        school = data['school']
-        attached_doc = data['attach_doc']
+        if not check_form_data(data, 'name', 'last_name', 'email', 'id_type', 'id', 'school', 'password',
+                               'repeat_password'):
+            display_data.update({'error': 'No se enviaron los parámetros necesarios...'})
+            return display_data
 
-        errors = await self.validate(id_type, id_, name, last_name, email, password, r_password, school, attached_doc)
+        errors = await self.validate(data)
 
-        if not errors:
-            id_type, id_, faculty = int(id_type), int(id_), int(school)
+        if errors:
+            display_data.update({'errors': errors, 'data': data})
+            return display_data
 
-            try:
-                await self.create(id_, id_type, hashpw(password.encode('utf-8'), gensalt()).decode('utf-8'),
-                                  name, last_name, email, faculty,
-                                  [*attached_doc.filename.rsplit('.', maxsplit=1), attached_doc.file.read()])
-            except:
-                raise
-            finally:
-                display_data['success'] = 'Se ha registrado tus datos. Su cuenta será verificada en las próximas horas.'
+        await self.create(int(data['id']), int(data['id_type']),
+                          hashpw(data['password'].encode('utf-8'), gensalt()).decode('utf-8'),
+                          data['name'], data['last_name'], data['email'], int(data['school']),
+                          file_id)
 
-        else:
-            display_data['errors'] = errors
+        del session['app']
 
+        display_data.update({'success': 'Se ha registrado al usuario exitosamente. Sin embargo, deberás de esperar'
+                                        'a que se autorice tu cuenta antes de que puedas acceder al sistema.'})
         return display_data
 
-    async def validate(self, id_type: str, id_: str, name: str, last_name: str, email: str, password: str,
-                       repeat_password: str, school: str, attached_doc: Union[bytearray, web_request.FileField]):
+    async def validate(self, data: dict):
         return await validator.validate([
-            ['Nombres', name, 'len:8,64'],
-            ['Apellidos', last_name, 'len:8,84'],
-            ['Correo electrónico', email, 'len:14,128|email|unique:correo_electronico,usuario'],
-            ['Tipo de documento', id_type, 'digits|len:1|custom', self.validate_document_type],
-            ['DNI o Carné de extranjería', id_, 'digits|custom|unique:id<int>,usuario', self.validate_id],
-            ['Contraseña', password, 'len:8,16|password'],
-            ['Repetir contraseña', repeat_password, 'repeat'],
-            ['Escuela', school, 'digits|len:1'],
-            ['Documento adjunto', attached_doc, 'custom', self.validate_attached_doc]
+            ['Nombres', data['name'], 'len:4,64'],
+            ['Apellidos', data['last_name'], 'len:4,84'],
+            ['Correo electrónico', data['email'], 'len:14,128|email|unique:correo_electronico,usuario'],
+            ['Tipo de documento', data['id_type'], 'digits|len:1|custom', self._validate_document_type],
+            ['DNI o Carné de extranjería', data['id'], 'digits|custom|unique:id<int>,usuario', self._validate_id],
+            ['Contraseña', data['password'], 'len:8,16|password'],
+            ['Repetir contraseña', data['repeat_password'], 'repeat'],
+            ['Escuela', data['school'], 'digits|len:1|custom', self._validate_school]
         ], self.request.app.db)
 
     @staticmethod
-    async def validate_attached_doc(name: str, value: web_request.FileField, *args):
-        if not isinstance(value, web_request.FileField):
-            return 'Algo ha sucedido, no se pudo validar el archivo'
-
-        if value.content_type not in ('application/msword',
-                                      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                      'application/pdf'):
-            return 'Tipo de archivo no soportado, solo PDFs o DOCs'
-
-        # Se debe de separar la subida de archivos a otro formulario de tipo multipart con el cual manejar la subida
-        # como un stream y detenerlo si excede los 10MBs, esto de aquí es muy propenso a error
-        # TODO
+    async def _validate_school(name: str, value: str, *args):
+        try:
+            parse_data_key(int(value), 'schools')
+        except KeyError:
+            return 'La escuela ingresada es incorrecta...'
 
     @staticmethod
-    async def validate_document_type(name: str, value: str, *args):
+    async def _validate_document_type(name: str, value: str, *args):
         if value not in ('0', '1'):
             return '{} debe de ser 0 ó 1'.format(name)
 
     @staticmethod
-    async def validate_id(name: str, value: str, pos: int, elems: list, dbi):
+    async def _validate_id(name: str, value: str, pos: int, elems: list, dbi):
         id_type, len_val = int(elems[pos - 1][1]), len(value)
 
         if id_type == 0:
-            if len_val != 9:
-                return 'El DNI debe contener 9 caracteres'
+            if not(8 <= len_val < 10):
+                return 'El DNI debe contener 8 o 9 caracteres'
         elif id_type == 1:
             if len_val != 12:
                 return 'El Carné de extranjería debe contener 12 caracteres'
@@ -172,33 +175,86 @@ class Registration(View):
             return 'Ingrese un tipo de documento correcto'
 
     async def create(self, id_: int, id_type: int, password: str, name: str, last_name: str, email: str, school: int,
-                     attached_doc: list):
+                     file_id: int):
         query = '''
             WITH estudiante AS (
                 INSERT INTO usuario (id, tipo_documento, credencial, nombres,
                                      apellidos, correo_electronico, escuela, autorizado,
                                      deshabilitado, fecha_creacion, fecha_ultima_actualizacion,
                                      rol_id) 
-                VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, $8, $9, $15)
-                RETURNING id
-            ), archivo AS (
-                INSERT INTO archivo (nombre, ext, contenido, fecha_subido)
-                VALUES ($10, $11, $12, $13)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, false, false, $8, $8, 1)
                 RETURNING id
             )
             INSERT INTO solicitud_autorizacion (alumno_id, fecha_creacion, archivo_id)
-            VALUES (
-                (SELECT id FROM estudiante LIMIT 1),
-                $14,
-                (SELECT id FROM archivo LIMIT 1)
-            )
+            VALUES ((SELECT id FROM estudiante), $8, $9)
         '''
-        now = datetime.utcnow()
         async with self.request.app.db.acquire() as connection:
-            return await (await connection.prepare(query)).fetch(id_, id_type, password, name,
-                                                                 last_name, email, school, now,
-                                                                 now, attached_doc[0], attached_doc[1], attached_doc[2],
-                                                                 now, now, 1)
+            return await (await connection.prepare(query)).fetch(id_, id_type, password, name, last_name, email, school,
+                                                                 datetime.utcnow() - timedelta(hours=5),
+                                                                 file_id)
+
+
+class UploadApplication(View):
+    @logged_out
+    @template('user/new.html')
+    async def post(self):
+        display_data = {'location': 'registration'}
+
+        reader = await self.request.multipart()
+
+        file = await reader.next()
+
+        if file is None:
+            display_data.update({'error': 'No se envió el parámetro necesario...'})
+            return display_data
+
+        if file.headers['Content-Type'] not in data_map['files'].values():
+            display_data.update({'error': 'El archivo debe de ser un PDF o Windows Office Doc.'})
+            return display_data
+
+        file_size = 0
+        _file = None
+        size_error = False
+
+        while True:
+            chunk = await file.read_chunk()
+
+            if not chunk:
+                break
+
+            if _file is None:
+                _file = chunk
+            else:
+                _file = _file + chunk
+
+            file_size += len(chunk)
+
+            if file_size > 3 * 1024 * 1024:
+                size_error = True
+                break
+
+        if size_error:
+            del _file, file_size
+            display_data.update({'error': 'El archivo no puede pesar más de 3MBs.'})
+            return display_data
+
+        file_id = await self.create(file.filename.rsplit('.', 1), _file)
+
+        session = await get_session(self.request)
+
+        session['app'] = {'id': file_id, 'filename': file.filename}
+
+        raise HTTPFound('/register')
+
+    async def create(self, file_details: list, file: bytearray):
+        statement = '''
+            INSERT INTO archivo (nombre, ext, contenido, fecha_subido)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(statement)).fetchval(*file_details, file,
+                                                                        datetime.utcnow() - timedelta(hours=5))
 
 
 class RecoverPassword(View):
@@ -485,5 +541,6 @@ routes = {
     'users/list':  UsersList,
     'users/list/page-{page:[1-9][0-9]*}': UsersList,
     'profile/{_user_id:[0-9]+}': ReadProfile,
+    'upload-application': UploadApplication,
     '/': Welcome
 }
