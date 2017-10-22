@@ -44,7 +44,7 @@
                             <td style="vertical-align:middle;">{{ student.correo_electronico }}</td>
                             <td style="vertical-align:middle;">{{ student.escuela }}</td>
                             <td style="vertical-align:middle;">{{ student.fecha_creacion }}</td>
-                            <td style="vertical-align:middle;"><a href="/download-file/{{ student.archivo_id }}" class="btn btn-default btn-sm"><span class="glyphicon glyphicon-download-alt"></span> Descargar</a></td>
+                            <td style="vertical-align:middle;"><a href="/download-file/{{ student.archivo_id }}" class="btn btn-success btn-sm" target="_blank"><span class="glyphicon glyphicon-download-alt"></span> Descargar</a></td>
                         </tr>
                     {% endfor %}
                 </tbody>

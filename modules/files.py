@@ -1,43 +1,56 @@
-from aiohttp.web import View, StreamResponse
-from asyncpg.pool import PoolConnectionHolder
+from aiohttp.web import View, StreamResponse, HTTPNotFound
 
-from utils.auth import get_auth_data, NotAuthenticated
 from utils.map import parse_data_key
+from utils.helpers import pass_user, get_chunks, permission_required
 
 
 class File(View):
-    async def get(self):
-        file = dict()
-        file['id'] = int(self.request.match_info['file_id'])
-        file.update(dict(await self.fetch_file_data(file['id'], self.request.app.db)))
+    @pass_user
+    @permission_required('autorizar_estudiantes')
+    async def get(self, user: dict):
+        file = await self.fetch_file(int(self.request.match_info['file']))
 
-        resp = StreamResponse(status=200,
-                              reason='OK',
-                              headers={'Content-Type': parse_data_key(file['ext'], 'files'),
-                                       'Content-Disposition': 'attachment; filename={0}.{1}'.format(file['name'],
-                                                                                                    file['ext'])})
+        if not file:
+            raise HTTPNotFound
 
-        await resp.prepare(self.request)
+        headers = {
+            'Content-Type': parse_data_key(file['ext'], 'files'),
+            'Content-Disposition': 'attachment; filename={file}'.format(file=file['nombre'])
+        }
 
-        resp.write(file['content'])
+        response = StreamResponse(status=200, reason='OK', headers=headers)
 
-        await resp.drain()
+        chunks = tuple(get_chunks(file['contenido']))
 
-        return resp
+        await response.prepare(self.request)
 
-    @staticmethod
-    async def fetch_file_data(id_: int, dbi: PoolConnectionHolder) -> bytearray:
+        for i in range(0, len(chunks)):
+            try:
+                response.write(chunks[i])
+
+                await response.drain()
+            except Exception as e:
+                print(repr(e))
+
+        del file, chunks
+
+        return response
+
+    async def fetch_file(self, id_: int) -> dict:
         query = '''
-            SELECT nombre AS name, ext, contenido AS content
+            SELECT CONCAT(archivo.nombre, '.', archivo.ext) as nombre,
+                   archivo.contenido, archivo.ext
             FROM archivo
-            WHERE id=$1
+            INNER JOIN solicitud_autorizacion
+                    ON solicitud_autorizacion.archivo_id = archivo.id
+            WHERE archivo.id = $1
             LIMIT 1
         '''
 
-        async with dbi.acquire() as connection:
+        async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetchrow(id_)
 
 
 routes = {
-    "download-file/{file_id:[1-9][0-9]*}": File
+    "download-file/{file:[1-9][0-9]*}": File
 }

@@ -935,6 +935,7 @@ class DownloadFile(Project):
                 print(repr(e))
 
         del file, chunks
+
         return response
 
     async def fetch_file(self, project: int, file: int):
