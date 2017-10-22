@@ -24,7 +24,7 @@
             <table class="table table-striped">
                 <thead >
                     <tr>
-                        <th style="vertical-align:middle;"><input type="checkbox" id="select_all"></th>
+                        <th style="vertical-align:middle;"><input type="checkbox" id="select_all" style="cursor:pointer;" data-target="entries"></th>
                         <th style="vertical-align:middle;">DNI / Carné de extranjería</th>
                         <th style="vertical-align:middle;">Tipo de documento</th>
                         <th style="vertical-align:middle;">Apellidos y nombres</th>
@@ -34,7 +34,7 @@
                         <th style="vertical-align:middle;">Documento adjunto</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="entries">
                     {% for student in students %}
                         <tr>
                             <td style="vertical-align:middle;"><input type="checkbox" name="student_{{ student.id }}"></td>

@@ -6,12 +6,7 @@
 
 {% block content %}
     <div class="content_wrapper padded">
-        <div class="row students_list_header">
-            <div class="col-sm-6">
-            </div>
-            <div class="col-sm-6 text-right">
-            </div>
-        </div>
+        <h2 style="margin-top:0;">Registrar asistencia de estudiantes</h2>
         <hr class="divider">
         <form method="POST">
             {% if result is defined%}
@@ -37,14 +32,14 @@
             <table class="table table-striped">
                 <thead>
                     <tr>
-                        <th width="5%"><input type="checkbox" id="select_all"></th>
+                        <th width="5%"><input type="checkbox" id="select_all" data-target="entries" style="cursor:pointer;" checked></th>
                         <th width="5%">#</th>
                         <th width="35%">Apellidos y nombres</th>
                         <th width="35%">DNI o Carné de extranjería</th>
                         <th width="20%">Observación</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="entries">
                     {% for student in students %}
                         <tr>
                             <td width="5%"><input type="checkbox" name="student_{{ student.id }}" checked></td>

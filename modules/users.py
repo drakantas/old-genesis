@@ -617,7 +617,14 @@ class User(View):
             return 'El correo electrónico {} ya se encuentra en uso por otro usuario'.format(value)
 
     @staticmethod
-    async def _validate_role(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder):
+    async def _validate_role(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder,
+                             user_role: int, self_role: int):
+        if user_role == 4 and self_role != 4:
+            return 'No tienes permisos suficientes para cambiar el rol de este usuario'
+
+        if int(value) == 4 and self_role != 4:
+            return 'No tienes permisos suficientes para asignar este rol'
+
         async with dbi.acquire() as connection:
             roles = await (await connection.prepare('''
                 SELECT *
@@ -726,7 +733,7 @@ class EditUser(User):
             display_data.update({'error': 'Parámetros enviados no son los requeridos...'})
             return display_data
 
-        errors = await self.validate(data, _user['id']) or []
+        errors = await self.validate(data, _user['id'], _user['rol_id'], user['rol_id']) or []
 
         if data['password'] != '':
             _p_errors = await self.validate_password(data['password'])
@@ -780,12 +787,12 @@ class EditUser(User):
         async with self.request.app.db.acquire() as connection:
             await connection.execute(statement, *parameters)
 
-    async def validate(self, data: dict, user_id: int):
+    async def validate(self, data: dict, user_id: int, user_role: int, self_role: int):
         return await validator.validate([
             ['Nombres', data['name'], 'len:8,64'],
             ['Apellidos', data['last_name'], 'len:8,64'],
             ['Correo electrónico', data['email'], 'len:14,128|email|custom', self._validate_email, user_id],
-            ['Rol', data['role'], 'digits|len:1|custom', self._validate_role],
+            ['Rol', data['role'], 'digits|len:1|custom', self._validate_role, user_role, self_role],
             ['Sexo', data['sex'], 'digits|len:1|custom', self._validate_sex],
             ['Número de teléfono', data['phone'], 'digits|len:9'],
             ['Dirección', data['address'], 'len:8,64'],

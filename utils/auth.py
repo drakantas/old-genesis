@@ -15,7 +15,7 @@ async def get_auth_data(request: Request) -> dict:
 
     async with request.app.db.acquire() as connection:
         query = '''
-            SELECT usuario.id, rol_usuario.desc as rol, correo_electronico,
+            SELECT usuario.id, rol_id, rol_usuario.desc as rol, correo_electronico,
                    nombres, apellidos, sexo,
                    tipo_documento, nacionalidad, escuela,
                    nro_telefono, distrito, direccion,

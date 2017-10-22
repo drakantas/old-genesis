@@ -21,6 +21,8 @@ class MainMenu
 
         this.registerHandler();
         this.registerSchoolTermSelectorHandler();
+
+        this.registerMasterCheckbox();
     }
 
     getPaths()
@@ -33,6 +35,17 @@ class MainMenu
         }
 
         return paths;
+    }
+
+    registerMasterCheckbox()
+    {
+        const checkbox = $('#select_all');
+        const target = $('#' + checkbox.data('target'));
+
+        checkbox.on('click', (e) => {
+            const checkboxes = $(target.find('input[type="checkbox"]'));
+            checkboxes.prop('checked', !checkboxes.prop('checked'));
+        });
     }
 
     registerHandler()
