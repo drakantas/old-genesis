@@ -2,7 +2,7 @@
 
 {% block content %}
 <form class="form-horizontal" method="POST">
-    {% if errors %}
+    {% if errors is defined %}
     <div class="alert alert-danger" role="alert">
         <ul>
             {% for error in errors %}
@@ -11,7 +11,12 @@
         </ul>
     </div>
     {% endif %}
-    {% if success %}
+    {% if error is defined %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+    </div>
+    {% endif %}
+    {% if success is defined %}
     <div class="alert alert-success" role="alert">
         {{ success }}
     </div>

@@ -132,8 +132,7 @@ class StudentsList(View):
                       escuela = $3 AND
                       nombres != '' AND
                       apellidos != '' AND
-                      autorizado = TRUE AND
-                      deshabilitado = FALSE
+                      autorizado = TRUE
                 LIMIT $4
             )
             SELECT id, tipo_documento, nombres, apellidos, asistencia, escuela,

@@ -1,12 +1,12 @@
 import re
 from typing import Union
-from datetime import datetime
-from aiohttp.web import View
+from aiohttp.web import View, HTTPFound
+from datetime import datetime, timedelta
 from asyncpg.pool import PoolConnectionHolder
 
 from utils.map import map_users
 from utils.validator import validator
-from utils.helpers import view, humanize_datetime, permission_required
+from utils.helpers import view, humanize_datetime, permission_required, pass_user
 
 
 # Muy malo...
@@ -261,8 +261,40 @@ class CreateSchoolTerm(View):
             return await (await connection.prepare(query)).fetchval(date, school)
 
 
+class DisableStudents(View):
+    @pass_user
+    @permission_required('mantener_usuarios')
+    async def get(self, user: dict):
+        try:
+            await self.update(user['escuela'])
+        except:
+            pass
+
+        raise HTTPFound('/users/list')
+
+    async def update(self, school: int):
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute('''
+                WITH ciclo_academico AS (
+                    SELECT ciclo_academico.id
+                    FROM ciclo_academico
+                    WHERE ciclo_academico.fecha_comienzo <= $1 AND
+                          ciclo_academico.fecha_fin >= $1 AND
+                          ciclo_academico.escuela = $2
+                )
+                
+                UPDATE usuario
+                SET deshabilitado = true
+                FROM matricula
+                WHERE matricula.ciclo_acad_id = (SELECT id FROM ciclo_academico) AND
+                      matricula.estudiante_id = usuario.id AND
+                      usuario.rol_id = 1
+            ''', datetime.utcnow() - timedelta(hours=5), school)
+
+
 routes = {
-    "school-term": {
-        "create": CreateSchoolTerm
+    'school-term': {
+        'create': CreateSchoolTerm,
+        'disable-students': DisableStudents
     }
 }

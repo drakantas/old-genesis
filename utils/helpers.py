@@ -1,3 +1,4 @@
+from math import ceil
 from asyncpg import Record
 from decimal import Decimal
 from datetime import datetime
@@ -168,8 +169,9 @@ def school_term_to_str(school_term: dict) -> str:
 
 
 def check_form_data(data: dict, *args) -> bool:
-    if not all([e for e in args if e in data] or [False]):
-        return False
+    for e in args:
+        if e not in data:
+            return False
 
     return True
 
@@ -219,6 +221,35 @@ def get_chunks(cluster: bytes, chunk_size: int = 8192) -> Generator:
 
     if last_chunk != 0:
         yield cluster[-1 * last_chunk:]
+
+
+def pagination(page: int, amount_entries: int, entries_per_page: int = 20) -> list:
+    _total_pages = int(ceil(amount_entries / entries_per_page))
+    first_page = 1
+    last_page = _total_pages
+
+    if _total_pages > 5:
+        lower_range = page - 2
+
+        if lower_range < 1:
+            lower_range = 1
+
+        upper_range = page + 3
+
+        if upper_range > _total_pages + 1:
+            upper_range = _total_pages + 1
+
+        _pagination = list(range(lower_range, upper_range))
+
+        if lower_range > 1:
+            _pagination = [first_page, 's'] + _pagination
+
+        if upper_range < _total_pages + 1:
+            _pagination = _pagination + ['s', last_page]
+    else:
+        _pagination = list(range(1, _total_pages + 1))
+
+    return _pagination
 
 
 class PermissionNotFound(Exception):

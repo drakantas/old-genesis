@@ -124,7 +124,6 @@ class Project(View):
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id
             WHERE usuario.rol_id = 5 AND
-                  usuario.deshabilitado = false AND
                   usuario.autorizado = true AND
                   usuario.escuela = $1
         '''
@@ -137,8 +136,7 @@ class Project(View):
             FROM usuario
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id
-            WHERE usuario.deshabilitado = false AND
-                  usuario.autorizado = true AND
+            WHERE usuario.autorizado = true AND
                   usuario.escuela = $1 AND
                   rol_usuario.revisar_proyectos = true
         '''
@@ -274,8 +272,7 @@ class Project(View):
                        matricula.ciclo_acad_id = $1
             LEFT JOIN integrante_proyecto
                    ON integrante_proyecto.usuario_id = usuario.id
-            WHERE usuario.deshabilitado = false AND
-                  usuario.autorizado = true AND
+            WHERE usuario.autorizado = true AND
                   usuario.rol_id = 1 AND
                   matricula.ciclo_acad_id = $1 AND
                  (integrante_proyecto.aceptado = false OR integrante_proyecto.aceptado IS NULL)

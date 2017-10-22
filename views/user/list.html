@@ -8,27 +8,56 @@
     <div class="content_wrapper padded">
         <h2 style="margin-top:0;">Usuarios</h2>
         <hr class="divider" />
-        <table class="table">
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Escuela: {{ users.0.escuela }}</h4>
+            </div>
+            <div class="col-md-6 text-right">
+                <a href="/school-term/disable-students" class="btn btn-danger">Deshabilitar estudiantes de este ciclo</a>
+                <a href="/users/create-new" class="btn btn-success">Crear nuevo usuario</a>
+            </div>
+        </div>
+        <hr class="divider" />
+        <table class="table table-hover">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Tipo de documento</th>
                     <th>Nombres y apellidos</th>
                     <th>Rol</th>
-                    <th>Escuela</th>
+                    <th>¿Autorizado?</th>
+                    <th>¿Deshabilitado?</th>
+                    <th>Opciones</th>
                 </tr>
             </thead>
             <tbody>
             {% for _user in users %}
             <tr>
-                <td>{{ _user.id }}</td>
-                <td>{{ _user.tipo_documento }}</td>
+                <td><abbr data-toggle="tooltip" title="{{ _user.tipo_documento }}">{{ _user.id }}</abbr></td>
                 <td>{{ _user.nombres }} {{ _user.apellidos }}</td>
                 <td>{{ _user.rol }}</td>
-                <td>{{ _user.escuela }}</td>
+                <td>{% if not _user.autorizado %}No autorizado{% else %}Autorizado{% endif %}</td>
+                <td>{% if not _user.deshabilitado %}Habilitado{% else %}Deshabilitado{% endif %}</td>
+                <td><a href="/users/{{ _user.id }}/edit" class="btn table-btn" data-toggle="tooltip" title="Modificar datos de usuario"><span class="glyphicon glyphicon-pencil"></span></a></td>
             </tr>
             {% endfor %}
             </tbody>
         </table>
+        <div class="text-center">
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    {% for _page in pagination %}
+                    {% if _page is not string %}
+                    <li class="{% if page == _page %}active{% endif %}">
+                        <a href="/users/list/page-{{ _page }}">{{ _page }}</a>
+                    </li>
+                    {% else %}
+                    <li class="disabled">
+                        <a>...</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                </ul>
+            </nav>
+        </div>
     </div>
 {% endblock %}

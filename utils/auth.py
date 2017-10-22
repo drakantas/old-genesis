@@ -75,10 +75,13 @@ async def get_auth_data(request: Request) -> dict:
             FROM usuario
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id
-            WHERE usuario.id = $1 AND
-                  deshabilitado != true
+            WHERE usuario.id = $1
         '''
         stmt = await connection.prepare(query)
         user = await stmt.fetchrow(int(session['id']), datetime.utcnow())
+
+        if not user['autorizado'] or user['deshabilitado']:
+            del session['id']
+            raise NotAuthenticated
 
         return user

@@ -8,7 +8,7 @@ from aiohttp.web import View, web_request, HTTPFound, HTTPNotFound
 
 from utils.validator import validator
 from utils.map import map_users, parse_data_key, data_map
-from utils.helpers import pass_user, view, logged_out, check_form_data
+from utils.helpers import pass_user, view, logged_out, check_form_data, pagination, permission_required, flatten
 
 
 class FailedAuth(Exception):
@@ -28,6 +28,10 @@ class Login(View):
 
         data = await self.request.post()
 
+        if not check_form_data(data, 'id', 'password'):
+            display_data.update({'error': 'No se ha enviado los parámetros necesarios...'})
+            return display_data
+
         id_, password = data['id'], data['password']
 
         errors = await self.validate(id_, password)
@@ -38,14 +42,13 @@ class Login(View):
             try:
                 await self.auth(id_, password)
             except FailedAuth as e:
-                errors = [str(e)]
+                display_data.update({'error': str(e)})
             else:
                 await self.init_session(id_)
 
                 raise HTTPFound('/')  # Redirigir al landing page
-
-        if errors:
-            display_data['errors'] = errors
+        else:
+            display_data.update({'errors': errors})
 
         return display_data
 
@@ -342,6 +345,7 @@ class UpdateAvatar(View):
 
 class UsersList(View):
     @view('user.list')
+    @permission_required('mantener_usuarios')
     async def get(self, user: dict):
         if 'page' in self.request.match_info:
             page = int(self.request.match_info['page'])
@@ -352,21 +356,40 @@ class UsersList(View):
         users = await self.fetch_users(user['escuela'], offset)
         users = map_users(users)
 
-        return {'users': users}
+        if not users:
+            raise HTTPNotFound
+
+        users_amount = await self.get_users_amount(user['escuela'])
+
+        return {'users': users,
+                'page': page,
+                'users_amount': users_amount,
+                'pagination': pagination(page, users_amount)}
 
     async def fetch_users(self, school: int, offset: int):
         query = '''
-            SELECT usuario.id, tipo_documento, nombres, apellidos, rol_usuario.desc as rol, sexo, deshabilitado, autorizado, escuela
+            SELECT usuario.id, tipo_documento, nombres, apellidos, rol_usuario.desc as rol, sexo, deshabilitado,
+                   autorizado, escuela
             FROM usuario
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id
             WHERE usuario.escuela = $1
-            ORDER BY rol_usuario.desc ASC
+            ORDER BY rol_usuario.id DESC, usuario.deshabilitado ASC
             LIMIT 20 OFFSET $2
         '''
 
         async with self.request.app.db.acquire() as connection:
             return await (await connection.prepare(query)).fetch(school, offset)
+
+    async def get_users_amount(self, school: int):
+        query = '''
+            SELECT COUNT(true)
+            FROM usuario
+            WHERE usuario.escuela = $1
+            LIMIT 1
+        '''
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare(query)).fetchval(school)
 
 
 class ChangePassword(View):
@@ -447,11 +470,13 @@ class ReadProfile(View):
 class EditProfile(View):
     @view('user.edit_profile')
     async def get(self, user: dict):
-        return {}
+        return {'districts': data_map['districts'],
+                'nationalities': data_map['nationalities']}
 
     @view('user.edit_profile')
     async def post(self, user: dict):
-        display_data = {}
+        display_data = {'districts': data_map['districts'],
+                        'nationalities': data_map['nationalities']}
 
         student_id = user['id']
 
@@ -480,14 +505,21 @@ class EditProfile(View):
     async def validate(self, data: dict, user_id: int):
         return await validator.validate([
             ['Nombres', data['name'], 'len:8,64'],
-            ['Apellidos', data['last_name'], 'len:8,84'],
-            ['Dirección', data['address'], 'len:8,84'],
+            ['Apellidos', data['last_name'], 'len:8,64'],
+            ['Dirección', data['address'], 'len:8,64'],
             ['Email', data['email'], 'len:14,128|email|custom', self._validate_email, user_id],
             ['Teléfono', data['phone'], 'digits|len:9'],
-            ['Nacionalidad', data['nationality'], 'len:2'],
-            ['Distrito', data['district'], 'digits|len:1'],
-            ['Sexo', data['gender'], 'digits|len:1']
+            ['Nacionalidad', data['nationality'], 'letters|len:2|custom', self._validate_nationality],
+            ['Distrito', data['district'], 'digits|len:1|custom', self._validate_district],
+            ['Sexo', data['gender'], 'digits|len:1|custom', self._validate_sex]
         ], self.request.app.db)
+
+    @staticmethod
+    async def _validate_sex(name: str, value: str, *args):
+        try:
+            parse_data_key(int(value), 'sexes')
+        except KeyError:
+            return '{} ingresado no es correcto'.format(name)
 
     @staticmethod
     async def _validate_email(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder, user_id: int):
@@ -507,6 +539,20 @@ class EditProfile(View):
         if status:
             return 'El correo electrónico {} ya se encuentra en uso por otro usuario'.format(value)
 
+    @staticmethod
+    async def _validate_district(name: str, value: str, *args):
+        try:
+            parse_data_key(int(value), 'districts')
+        except KeyError:
+            return '{} ingresado no es correcto'.format(name)
+
+    @staticmethod
+    async def _validate_nationality(name: str, value: str, *args):
+        try:
+            parse_data_key(value, 'nationalities')
+        except KeyError:
+            return '{} ingresada no es correcto'.format(name)
+
     async def update(self, id_: int, name: str, last_name: str,
                      address: str, email: str, phone: int,
                      nationality: str, district: int, gender: int):
@@ -520,6 +566,274 @@ class EditProfile(View):
             return await (await connection.prepare(query)).fetch(id_, name, last_name,
                                                                  address, email, phone,
                                                                  nationality, district, gender)
+
+
+class User(View):
+    async def fetch_user(self, user: int, school: int):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT id, nombres, apellidos, rol_id, sexo, tipo_documento, nacionalidad, correo_electronico,
+                       escuela, nro_telefono, distrito, direccion, avatar, autorizado, deshabilitado
+                FROM usuario
+                WHERE id = $1 AND
+                      escuela = $2
+                LIMIT 1
+            ''')).fetchrow(user, school)
+
+    async def get_user(self, user: int, school: int):
+        _user = await self.fetch_user(user, school)
+
+        if not _user:
+            raise HTTPNotFound
+
+        return _user
+
+    async def fetch_roles(self):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT *
+                FROM rol_usuario
+            ''')).fetch()
+
+    async def get_roles(self):
+        return flatten(await self.fetch_roles() or [], {})
+
+    @staticmethod
+    async def _validate_email(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder, user_id: int):
+        query = '''
+                SELECT true
+                FROM usuario
+                WHERE id != $1 AND
+                      correo_electronico = $2
+            '''
+
+        async with dbi.acquire() as connection:
+            statement = await connection.prepare(query)
+            status = await statement.fetchval(user_id, value)
+
+        status = status or False
+
+        if status:
+            return 'El correo electrónico {} ya se encuentra en uso por otro usuario'.format(value)
+
+    @staticmethod
+    async def _validate_role(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder):
+        async with dbi.acquire() as connection:
+            roles = await (await connection.prepare('''
+                SELECT *
+                FROM rol_usuario
+            ''')).fetch()
+
+        roles = flatten(roles, {}) if roles else []
+
+        error = True
+        for role in roles:
+            if int(value) == role['id']:
+                error = False
+
+        if error:
+            return '{}: {} no existe...'.format(name, value)
+
+    @staticmethod
+    async def _validate_sex(name: str, value: str, *args):
+        try:
+            parse_data_key(int(value), 'sexes')
+        except KeyError:
+            return '{} ingresado no es correcto'.format(name)
+
+    @staticmethod
+    async def _validate_district(name: str, value: str, *args):
+        try:
+            parse_data_key(int(value), 'districts')
+        except KeyError:
+            return '{} ingresado no es correcto'.format(name)
+
+    @staticmethod
+    async def _validate_nationality(name: str, value: str, *args):
+        try:
+            parse_data_key(value, 'nationalities')
+        except KeyError:
+            return '{} ingresada no es correcto'.format(name)
+
+    @staticmethod
+    async def _validate_authorized(name: str, value: str, *args):
+        try:
+            parse_data_key(int(value), 'authorized')
+        except KeyError:
+            return '{} ingresado no es correcto'.format(name)
+
+    @staticmethod
+    async def _validate_disabled(name: str, value: str, *args):
+        try:
+            parse_data_key(int(value), 'disabled')
+        except KeyError:
+            return '{} ingresado no es correcto'
+
+
+class EditUser(User):
+    @view('user.edit')
+    @permission_required('mantener_usuarios')
+    async def get(self, user: dict):
+        _user = await self.get_user(int(self.request.match_info['user']), user['escuela'])
+
+        return {'_user': _user,
+                'schools': data_map['schools'],
+                'sexes': data_map['sexes'],
+                'districts': data_map['districts'],
+                'nationalities': data_map['nationalities'],
+                'roles': await self.get_roles(),
+                '_authorized': data_map['authorized'],
+                '_disabled': data_map['disabled']}
+
+    @view('user.edit')
+    @permission_required('mantener_usuarios')
+    async def post(self, user: dict):
+        _user = await self.get_user(int(self.request.match_info['user']), user['escuela'])
+        display_data = {
+            '_user': _user,
+            'schools': data_map['schools'],
+            'sexes': data_map['sexes'],
+            'districts': data_map['districts'],
+            'nationalities': data_map['nationalities'],
+            'roles': await self.get_roles(),
+            '_authorized': data_map['authorized'],
+            '_disabled': data_map['disabled']
+        }
+
+        data = await self.request.post()
+
+        if not check_form_data(data, 'name', 'last_name', 'email', 'password', 'role', 'sex',
+                               'phone', 'district', 'nationality', 'authorized', 'disabled',
+                               'address'):
+            display_data.update({'error': 'Parámetros enviados no son los requeridos...'})
+            return display_data
+
+        errors = await self.validate(data, _user['id']) or []
+
+        if data['password'] != '':
+            _p_errors = await self.validate_password(data['password'])
+
+            if _p_errors:
+                errors.extend(_p_errors)
+                password = None
+            else:
+                password = hashpw(data['password'].encode('utf-8'), gensalt()).decode('utf-8')
+        else:
+            password = None
+
+        if errors:
+            display_data.update({'errors': errors})
+            return display_data
+
+        await self.update(data['name'], data['last_name'], data['email'], int(data['role']), int(data['sex']),
+                          int(data['phone']), int(data['district']), data['nationality'], int(data['authorized']),
+                          int(data['disabled']), data['address'], _user['id'], password=password)
+
+        display_data.update({'success': 'Se ha actualizado al usuario exitosamente',
+                             '_user': await self.get_user(int(self.request.match_info['user']), user['escuela'])})
+        return display_data
+
+    async def update(self, name: str, last_name: str, email: str, role: int, sex: int, phone: int, district: int,
+                     nationality: str, authorized: int, disabled: int, address: str, user: int, password: str = None):
+        _s = ',credencial=$13' if password is not None else ''
+
+        statement = '''
+            UPDATE usuario
+            SET nombres = $1,
+                apellidos = $2,
+                correo_electronico = $3,
+                rol_id = $4,
+                sexo = $5,
+                nro_telefono = $6,
+                distrito = $7,
+                nacionalidad = $8,
+                autorizado = $9,
+                direccion = $11,
+                deshabilitado = $10{}
+            WHERE id = $12
+        '''.format(_s)
+
+        parameters = [name, last_name, email, role, sex, phone, district, nationality, bool(authorized), bool(disabled),
+                      address, user]
+
+        if password is not None:
+            parameters.append(password)
+
+        async with self.request.app.db.acquire() as connection:
+            await connection.execute(statement, *parameters)
+
+    async def validate(self, data: dict, user_id: int):
+        return await validator.validate([
+            ['Nombres', data['name'], 'len:8,64'],
+            ['Apellidos', data['last_name'], 'len:8,64'],
+            ['Correo electrónico', data['email'], 'len:14,128|email|custom', self._validate_email, user_id],
+            ['Rol', data['role'], 'digits|len:1|custom', self._validate_role],
+            ['Sexo', data['sex'], 'digits|len:1|custom', self._validate_sex],
+            ['Número de teléfono', data['phone'], 'digits|len:9'],
+            ['Dirección', data['address'], 'len:8,64'],
+            ['Distrito', data['district'], 'digits|len:1,2|custom', self._validate_district],
+            ['Nacionalidad', data['nationality'], 'letters|len:2|custom', self._validate_nationality],
+            ['Autorizado', data['authorized'], 'digits|len:1|custom', self._validate_authorized],
+            ['Deshabilitado', data['disabled'], 'digits|len:1|custom', self._validate_disabled]
+        ], self.request.app.db)
+
+    @staticmethod
+    async def validate_password(password: str):
+        return await validator.validate([
+            ['Contraseña', password, 'len:8,16|password']
+        ])
+
+
+class RemoveAvatar(User):
+    @pass_user
+    @permission_required('mantener_usuarios')
+    async def get(self, user: dict):
+        _user = await self.get_user(int(self.request.match_info['user']), user['escuela'])
+
+        await self.update(_user['id'])
+
+        raise HTTPFound('/users/{user}/edit'.format(user=_user['id']))
+
+    async def update(self, user: int):
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute('''
+                UPDATE usuario
+                SET avatar = NULL
+                WHERE id = $1
+            ''', user)
+
+
+class RegisterStudent(User):
+    @pass_user
+    @permission_required('mantener_usuarios')
+    async def get(self, user: dict):
+        _user = await self.get_user(int(self.request.match_info['user']), user['escuela'])
+
+        if _user['rol_id'] != 1:
+            raise HTTPNotFound
+
+        try:
+            await self.update(_user['id'], user['escuela'])
+        except:
+            pass
+
+        raise HTTPFound('/users/{user}/edit'.format(user=_user['id']))
+
+    async def update(self, user: int, school: int):
+        async with self.request.app.db.acquire() as connection:
+            return await connection.execute('''
+                WITH ciclo_academico AS (
+                    SELECT *
+                    FROM ciclo_academico
+                    WHERE escuela = $1 AND
+                          fecha_comienzo <= $2 AND
+                          fecha_fin >= $2
+                    LIMIT 1
+                )
+                
+                INSERT INTO matricula (estudiante_id, ciclo_acad_id)
+                VALUES ($3, (SELECT id FROM ciclo_academico))
+            ''', school, datetime.utcnow() - timedelta(hours=5), user)
 
 
 class Welcome(View):
@@ -540,6 +854,9 @@ routes = {
     },
     'users/list':  UsersList,
     'users/list/page-{page:[1-9][0-9]*}': UsersList,
+    'users/{user:[1-9][0-9]*}/edit': EditUser,
+    'users/{user:[1-9][0-9]*}/remove-avatar': RemoveAvatar,
+    'users/{user:[1-9][0-9]*}/register-student': RegisterStudent,
     'profile/{_user_id:[0-9]+}': ReadProfile,
     'upload-application': UploadApplication,
     '/': Welcome

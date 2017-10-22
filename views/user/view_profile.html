@@ -20,7 +20,7 @@
                     <span>{{ requested_user.correo_electronico }} </span><br /><br />
                     <h4>Direccion: </h4>
                     <span>
-                        {% if not (requested_user.direccion or requested_user.distrito) %}
+                        {% if not (requested_user.direccion and requested_user.distrito) %}
                             No registrado
                         {%else %}
                             {{ requested_user.direccion }}, {{ requested_user.distrito }}
@@ -41,7 +41,7 @@
                     <br /><br />
                 </div>
                 <h4>Nacionalidad: </h4>
-                <span>Peruano</span><br /><br />
+                <span>{% if requested_user.nacionalidad %}{{ requested_user.nacionalidad }}{% else %}No registrado{% endif %}</span><br /><br />
                 <h4>Sexo: </h4>
                 <span>{{ requested_user.sexo }}</span><br /><br />
             </div>
