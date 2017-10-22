@@ -108,6 +108,17 @@
             </ul>
         </li>
         {% endif %}
+        {% if user.permissions.mantener_usuarios %}
+        <li>
+            <a href="#" class="has-arrow">
+                <span class="glyphicon glyphicon-user"></span> Usuarios
+            </a>
+            <ul aria-expanded="true">
+                <li><a href="/users/list"><span class="glyphicon glyphicon-menu-right"></span> Listado de usuarios</a></li>
+                <li><a href="/users/create-new"><span class="glyphicon glyphicon-menu-right"></span> Crear nuevo usuario</a></li>
+            </ul>
+        </li>
+        {% endif %}
         <li>
             <a href="/logout"><span class="glyphicon glyphicon-off"></span> Salir</a>
         </li>
