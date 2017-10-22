@@ -295,7 +295,9 @@ class UpdateAvatar(View):
         avatar = await reader.next()
 
         if avatar is None:
-            return {'errors': ['Data enviada no es correcta...']}
+            return {'errors': ['Data enviada no es correcta...'],
+                    'districts': data_map['districts'],
+                    'nationalities': data_map['nationalities']}
 
         if avatar.headers['Content-Type'] not in ('image/png', 'image/jpeg'):
             return {'errors': ['Solo se soporta los formatos jpeg y png']}
@@ -323,11 +325,15 @@ class UpdateAvatar(View):
                 break
 
         if size_error:
-            return {'errors': ['El avatar no puede pesar más de 2MBs']}
+            return {'errors': ['El avatar no puede pesar más de 2MBs'],
+                    'districts': data_map['districts'],
+                    'nationalities': data_map['nationalities']}
 
         await self.update(user['id'], bytearray(b64encode(_avatar)))
 
-        return {'success': 'Se ha actualizado tu avatar'}
+        return {'success': 'Se ha actualizado tu avatar',
+                'districts': data_map['districts'],
+                'nationalities': data_map['nationalities']}
 
     async def update(self, id_: int, chunk: bytearray):
         query = '''
@@ -838,7 +844,7 @@ class AdminRegisterUser(User):
             display_data.update({'error': 'Parámetros enviados no son los requeridos...'})
             return display_data
 
-        errors = await self.validate(data)
+        errors = await self.validate(data, 1, user['rol_id'])
 
         if errors:
             display_data.update({'errors': errors})
@@ -863,7 +869,7 @@ class AdminRegisterUser(User):
                                             int(data['district']), data['address'], None, now, now,
                                             bool(int(data['authorized'])), bool(int(data['disabled'])))
 
-    async def validate(self, data: dict):
+    async def validate(self, data: dict, user_role: int, self_role: int):
         return await validator.validate([
             ['Tipo de documento', data['id_type'], 'digits|len:1|custom', self._validate_document_type],
             ['DNI o Carné de extranjería', data['id'], 'digits|custom|unique:id<int>,usuario', self._validate_id],
@@ -871,7 +877,7 @@ class AdminRegisterUser(User):
             ['Nombres', data['name'], 'len:8,64'],
             ['Apellidos', data['last_name'], 'len:8,64'],
             ['Correo electrónico', data['email'], 'len:14,128|email|unique:correo_electronico,usuario'],
-            ['Rol', data['role'], 'digits|len:1|custom', self._validate_role],
+            ['Rol', data['role'], 'digits|len:1|custom', self._validate_role, user_role, self_role],
             ['Sexo', data['sex'], 'digits|len:1|custom', self._validate_sex],
             ['Número de teléfono', data['phone'], 'digits|len:9'],
             ['Dirección', data['address'], 'len:8,64'],

@@ -630,7 +630,8 @@ class EligibleProjects(View):
                 LEFT JOIN promedio_notas_ciclo
                        ON promedio_notas_ciclo.estudiante_id = integrante_proyecto.usuario_id AND
                           promedio_notas_ciclo.ciclo_acad_id = $2
-                WHERE integrante_proyecto.proyecto_id = $1
+                WHERE integrante_proyecto.proyecto_id = $1 AND
+                      integrante_proyecto.aceptado = TRUE
             ''')).fetch(project, school_term)
 
     async def fetch_projects(self, school_term: int):

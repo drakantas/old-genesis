@@ -1,5 +1,7 @@
 {% extends "layout/app.html" %}
 
+{% block title %}Crear proyecto de tésis{% endblock %}
+
 {% block breadcrumbs %}
 <a href="/">Inicio</a> <span class="glyphicon glyphicon-menu-right separator"></span> <a class="current_page">Crear proyecto</a>
 {% endblock %}
@@ -47,15 +49,15 @@
             </div>
             <div class="form-group">
                 <label for="line_of_research">Línea de investigación</label>
-                <input type="text" name="line_of_research" id="line_of_research" class="form-control" placeholder="Línea de investigación" />
+                <input type="text" name="line_of_research" id="line_of_research" class="form-control" placeholder="Línea de investigación" {% if error is defined %}disabled{% endif %} />
             </div>
             <div class="form-group">
                 <label for="description">Descripción</label>
-                <textarea rows="5" name="description" id="description" class="form-control" placeholder="Descripción" style="resize:none;"></textarea>
+                <textarea rows="5" name="description" id="description" class="form-control" placeholder="Descripción" style="resize:none;" {% if error is defined %}disabled{% endif %}></textarea>
             </div>
         </div>
         <div class="content_wrapper text-right" style="background-color:transparent;box-shadow:none;">
-            <a href="/" class="btn btn-default btn-lg">Cancelar</a> <button type="submit" class="btn btn-success btn-lg" {% if error is defined %}disabled{% endif %}>Crear</button>
+            <a href="/" class="btn btn-default btn-lg {% if error is defined %}disabled{% endif %}">Cancelar</a> <button type="submit" class="btn btn-success btn-lg" {% if error is defined %}disabled{% endif %}>Crear</button>
         </div>
     </form>
 {% endblock %}

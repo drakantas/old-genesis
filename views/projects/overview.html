@@ -1,5 +1,7 @@
 {% extends "layout/project.html" %}
 
+{% block title %}Resumen de proyecto{% endblock %}
+
 {% block project_page %}
     <div class="content_wrapper padded">
         <h3 style="margin-top:0;">{% if members|length == 1 %}Autor{% else %}Autores{% endif %}</h3>
