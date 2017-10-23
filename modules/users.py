@@ -40,11 +40,11 @@ class Login(View):
             id_ = int(id_)
 
             try:
-                await self.auth(id_, password)
+                await self.auth(id_, password);
             except FailedAuth as e:
-                display_data.update({'error': str(e)})
+                display_data.update({'error': str(e)});
             else:
-                await self.init_session(id_)
+                await self.init_session(id_);
 
                 raise HTTPFound('/')  # Redirigir al landing page
         else:
