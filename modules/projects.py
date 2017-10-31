@@ -369,7 +369,14 @@ class ProjectsList(View):
             _project['members'] = flatten(await self.fetch_members(_project['id']), {})
             _project['reviewed'] = await self.fetch_reviews_count(_project['id'])
             _project['decision_panel'] = flatten(await self.fetch_decision_panel(_project['id']), {})
-            _project['presentation_date'] = await self.fetch_presentation_date(_project['id'])
+
+            presentation_date = await self.fetch_presentation_date(_project['id'])
+            if presentation_date:
+                _project['presentation_date'] = humanize_datetime(presentation_date)
+                _project['pdate_no_time'] = humanize_datetime(presentation_date, with_time=False)
+            else:
+                _project['presentation_date'] = None
+                _project['pdate_no_time'] = None
 
             return _project
 

@@ -13,7 +13,7 @@
         De mi consideración:<br/>
         Como en anterior ocasión, tengo el agrado de adjuntar las Carátulas de los
         de los proyectos que desarrollan los Bachilleres del Taller de Tesis (2017-II), los
-        que de ser declarados Aptos, sustentarían el sábado 25 de noviembre de 2017.
+        que de ser declarados Aptos, sustentarían el {% if projects and projects.0.pdate_no_time is not none %}{{ projects.0.pdate_no_time }}{% else %}No se registró fecha de sustentación{% endif %}
     </div>
     <div class="content_wrapper padded">
         <h2 style="margin-top:0;" class="hidden-print">Listado de proyectos</h2>
@@ -31,7 +31,7 @@
                 </select>
             </div>
             <div class="col-sm-6 text-right">
-                {% if school_term_has_not_begun is defined %}
+                {% if error is defined %}
                 <a href="javascript:window.print();" class="btn btn-default disabled"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
                 {% else %}
                 <a href="javascript:window.print();" class="btn btn-default"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
