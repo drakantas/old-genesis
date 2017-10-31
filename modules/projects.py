@@ -7,7 +7,8 @@ from aiohttp.web import View, HTTPNotFound, json_response, StreamResponse, HTTPU
 
 from utils.validator import validator
 from utils.map import data_map, parse_data_key
-from utils.helpers import view, permission_required, flatten, school_term_to_str, pass_user, check_form_data, get_chunks
+from utils.helpers import view, permission_required, flatten, school_term_to_str, pass_user, check_form_data,\
+    get_chunks, humanize_datetime
 
 
 _datetime = '%m/%d/%Y %I:%M %p'
@@ -357,7 +358,8 @@ class ProjectsList(View):
             school_term = await self.fetch_school_term(user['escuela'])
 
         if not school_term:
-            return {'error': 'No se encontró un ciclo académico'}
+            return {'error': 'No se encontró un ciclo académico',
+                    'now': humanize_datetime(datetime.utcnow() - timedelta(hours=5), with_time=False)}
 
         projects = await self.fetch_projects(school_term)
 
@@ -380,7 +382,8 @@ class ProjectsList(View):
 
         return {'projects': _projects,
                 'school_terms': await self.get_school_terms(user),
-                'current_school_term_id': school_term}
+                'current_school_term_id': school_term,
+                'now': humanize_datetime(datetime.utcnow() - timedelta(hours=5), with_time=False)}
 
     async def get_school_terms(self, user: dict):
 

@@ -7,10 +7,18 @@
 {% endblock %}
 
 {% block content %}
+    <div class="content_wrapper padded visible-print-block">
+        La Molina, {{ now }}<br />
+        <strong>Sr. Dr. Manuel Cáceres Lampen - Director de Posgrado de la USMP-FIA</strong><br />
+        De mi consideración:<br/>
+        Como en anterior ocasión, tengo el agrado de adjuntar las Carátulas de los
+        de los proyectos que desarrollan los Bachilleres del Taller de Tesis (2017-II), los
+        que de ser declarados Aptos, sustentarían el sábado 25 de noviembre de 2017.
+    </div>
     <div class="content_wrapper padded">
-        <h2 style="margin-top:0;">Listado de proyectos</h2>
-        <hr class="divider" />
-        <div class="row students_list_header">
+        <h2 style="margin-top:0;" class="hidden-print">Listado de proyectos</h2>
+        <hr class="divider hidden-print" />
+        <div class="row students_list_header hidden-print">
             <div class="col-sm-6">
                 <select class="selectpicker" id="school_term_selector" data-live-search="true" data-width="auto">
                     {% for school_term in school_terms %}
@@ -31,26 +39,26 @@
             </div>
         </div>
         {% if error is defined %}
-        <hr class="divider">
-        <div class="alert alert-info">
+        <hr class="divider hidden-print">
+        <div class="alert alert-info hidden-print">
             {{ error }}.
         </div>
         {% else %}
         {% if projects|length == 0 %}
-        <hr class="divider">
-        <div class="alert alert-info">
+        <hr class="divider hidden-print">
+        <div class="alert alert-info hidden-print">
             No hay proyectos registrados aún.
         </div>
         {% else %}
         <table class="table display" id="table_id">
             <thead>
                 <tr>
-                    <th>Titulo de tesis</th>
-                    <th>Integrantes</th>
-                    <th>Cantidad de observaciones</th>
-                    <th>Fecha de presentacion</th>
-                    <th>Jurado</th>
-                    <th>Opciones</th>
+                    <th>Proyectos</th>
+                    <th>Tesistas</th>
+                    <th class="hidden-print">Cantidad de observaciones</th>
+                    <th class="hidden-print">Fecha de presentacion</th>
+                    <th class="hidden-print">Jurado</th>
+                    <th class="hidden-print">Opciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -61,9 +69,9 @@
                 <td>
                     {{ project.members[0].nombres }} {{ project.members[0].apellidos }}
                 </td>
-                <td>{{ project.reviewed }}</td>
-                <td>{{ project.presentation_date or 'Aún no asignado' }}</td>
-                <td width="20%">
+                <td class="hidden-print">{{ project.reviewed }}</td>
+                <td class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
+                <td width="20%" class="hidden-print">
                     {% if project.presentation_date is none %}
                     No se asignó un jurado aún
                     {% else %}
@@ -74,7 +82,7 @@
                     </ul>
                     {% endif %}
                 </td>
-                <td width="15%">
+                <td width="15%" class="hidden-print">
                     <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
                     {% if user.permissions.gestionar_proyectos %}
                     <a href="/projects/{{ project.id }}/assign-review" class="btn table-btn assign_reviewer" data-toggle="tooltip" title="Asignar a observación"><span class="glyphicon glyphicon-eye-open"></span></a>
@@ -88,9 +96,9 @@
             <tr>
                 <td rowspan="2">{{ project.titulo }}</td>
                 <td>{{ project.members[0].nombres }} {{ project.members[0].apellidos }}</td>
-                <td rowspan="2">{{ project.reviewed }}</td>
-                <td rowspan="2">{{ project.presentation_date or 'Aún no asignado' }}</td>
-                <td rowspan="2">
+                <td rowspan="2" class="hidden-print">{{ project.reviewed }}</td>
+                <td rowspan="2" class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
+                <td rowspan="2" class="hidden-print">
                     {% if project.presentation_date is none %}
                     No se asignó un jurado aún
                     {% else %}
@@ -101,7 +109,7 @@
                     </ul>
                     {% endif %}
                 </td>
-                <td rowspan="2" width="15%">
+                <td rowspan="2" width="15%" class="hidden-print">
                     <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
                     {% if user.permissions.gestionar_proyectos %}
                     <a href="/projects/{{ project.id }}/assign-review" class="btn table-btn assign_reviewer" data-toggle="tooltip" title="Asignar a observación"><span class="glyphicon glyphicon-eye-open"></span></a>
@@ -120,6 +128,11 @@
         </table>
         {% endif %}
         {% endif %}
+    </div>
+    <div class="content_wrapper padded visible-print-block">
+        Sin otro particular quedo de Usted<br />
+        Atentamente,<br />
+        {{ user.nombres }}  {{ user.apellidos }}
     </div>
 {% endblock %}
 

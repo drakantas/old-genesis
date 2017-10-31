@@ -411,3 +411,10 @@ div[class^='schedule']:last-child {
 #reviews_list > tbody > tr {
     cursor: pointer;
 }
+
+@media print {
+    #app_container > #content {
+        padding-left: 0;
+        padding-top: 0;
+    }
+}

@@ -3,7 +3,7 @@
 {% block container_title %}app_container{% endblock %}
 
 {% block main %}
-<div id="sidebar">
+<div id="sidebar" class="hidden-print">
     <ul class="metismenu app_nav">
         <li>
             <a href="/"><span class="glyphicon glyphicon-home"></span> Inicio</a>
@@ -124,7 +124,7 @@
         </li>
     </ul>
 </div>
-<div id="top_nav">
+<div id="top_nav" class="hidden-print">
     <div class="tn_breadcrumb">
         {% block breadcrumbs %}{% endblock %}
     </div>
