@@ -31,7 +31,7 @@
                 </select>
             </div>
             <div class="col-sm-6 text-right">
-                {% if error is defined %}
+                {% if error is defined or projects|length == 0 %}
                 <a href="javascript:window.print();" class="btn btn-default disabled"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
                 {% else %}
                 <a href="javascript:window.print();" class="btn btn-default"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
