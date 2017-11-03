@@ -525,7 +525,8 @@ class CreateProject(Project):
 
         if errors:
             return {'errors': errors,
-                    'students': students}
+                    'students': students,
+                    'data': data}
 
         await self.create(data, school_term['id'], user['id'])
 
@@ -558,7 +559,7 @@ class CreateProject(Project):
 
     async def validate(self, data: dict, students: list):
         validation_groups = [
-            ['Título', data['title'], 'len:16,128|unique:titulo,proyecto'],
+            ['Título', data['title'], 'len:16,256|unique:titulo,proyecto'],
             ['Línea de investigación', data['line_of_research'], 'len:16,128'],
             ['Descripción', data['description'], 'len:32,512']
         ]
@@ -714,7 +715,7 @@ class EditProjectSettings(Project):
 
     async def validate(self, data: dict, project: int, school_term: int):
         return await validator.validate([
-            ['Título', data['title'], 'len:16,128|custom', self._validate_title, project, school_term],
+            ['Título', data['title'], 'len:16,256|custom', self._validate_title, project, school_term],
             ['Línea de investigación', data['line_of_research'], 'len:16,128'],
             ['Descripción', data['description'], 'len:32,512']
         ], self.request.app.db)

@@ -36,7 +36,7 @@
             </div>
             <div class="form-group">
                 <label for="title">Título de tésis</label>
-                <input type="text" name="title" id="title" class="form-control" placeholder="Título de tésis" {% if error is defined %}disabled{% endif %} />
+                <input type="text" name="title" id="title" class="form-control" placeholder="Título de tésis" {% if error is defined %}disabled{% endif %} value="{% if data is defined %}{{ data.title }}{% endif %}"/>
             </div>
             <div class="form-group">
                 <label for="partner">Compañero(a) de equipo</label>
@@ -49,11 +49,11 @@
             </div>
             <div class="form-group">
                 <label for="line_of_research">Línea de investigación</label>
-                <input type="text" name="line_of_research" id="line_of_research" class="form-control" placeholder="Línea de investigación" {% if error is defined %}disabled{% endif %} />
+                <input type="text" name="line_of_research" id="line_of_research" class="form-control" placeholder="Línea de investigación" {% if error is defined %}disabled{% endif %} value="{% if data is defined %}{{ data.line_of_research }}{% endif %}"/>
             </div>
             <div class="form-group">
                 <label for="description">Descripción</label>
-                <textarea rows="5" name="description" id="description" class="form-control" placeholder="Descripción" style="resize:none;" {% if error is defined %}disabled{% endif %}></textarea>
+                <textarea rows="5" name="description" id="description" class="form-control" placeholder="Descripción" style="resize:none;" {% if error is defined %}disabled{% endif %}>{% if data is defined %}{{ data.description }}{% endif %}</textarea>
             </div>
         </div>
         <div class="content_wrapper text-right" style="background-color:transparent;box-shadow:none;">
