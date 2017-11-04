@@ -417,4 +417,8 @@ div[class^='schedule']:last-child {
         padding-left: 0;
         padding-top: 0;
     }
+
+    #app_container > #content {
+        font-size: 16px;
+    }
 }
