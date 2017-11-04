@@ -67,7 +67,7 @@
             <tr>
                 <td width="30%" style="text-transform:uppercase;">{{ project.titulo }}</td>
                 <td width="30%" style="text-transform:capitalize;">
-                    {{ project.members[0].nombres }} {{ project.members[0].apellidos }}
+                    {{ project.members[0].nombres|lower }} {{ project.members[0].apellidos|lower }}
                 </td>
                 <td class="hidden-print">{{ project.reviewed }}</td>
                 <td class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
@@ -95,7 +95,7 @@
             {% else %}
             <tr>
                 <td rowspan="2" width="30%" style="text-transform:uppercase;">{{ project.titulo }}</td>
-                <td width="30" style="text-transform:capitalize;">{{ project.members[0].nombres }} {{ project.members[0].apellidos }}</td>
+                <td width="30" style="text-transform:capitalize;">{{ project.members[0].nombres|lower }} {{ project.members[0].apellidos|lower }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.reviewed }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
                 <td rowspan="2" class="hidden-print">
@@ -120,7 +120,7 @@
                 </td>
             </tr>
             <tr>
-                <td width="25%" style="text-transform:capitalize;">{{ project.members[1].nombres }} {{ project.members[1].apellidos }}</td>
+                <td width="25%" style="text-transform:capitalize;">{{ project.members[1].nombres|lower }} {{ project.members[1].apellidos|lower }}</td>
             </tr>
             {% endif %}
             {% endfor %}
