@@ -65,8 +65,8 @@
             {% for project in projects %}
             {% if project.members|length == 1 %}
             <tr>
-                <td>{{ project.titulo }}</td>
-                <td>
+                <td width="30%" style="text-transform:uppercase;">{{ project.titulo }}</td>
+                <td width="30%" style="text-transform:capitalize;">
                     {{ project.members[0].nombres }} {{ project.members[0].apellidos }}
                 </td>
                 <td class="hidden-print">{{ project.reviewed }}</td>
@@ -94,8 +94,8 @@
             </tr>
             {% else %}
             <tr>
-                <td rowspan="2">{{ project.titulo }}</td>
-                <td>{{ project.members[0].nombres }} {{ project.members[0].apellidos }}</td>
+                <td rowspan="2" width="30%" style="text-transform:uppercase;">{{ project.titulo }}</td>
+                <td width="30" style="text-transform:capitalize;">{{ project.members[0].nombres }} {{ project.members[0].apellidos }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.reviewed }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
                 <td rowspan="2" class="hidden-print">
@@ -120,7 +120,7 @@
                 </td>
             </tr>
             <tr>
-                <td>{{ project.members[1].nombres }} {{ project.members[1].apellidos }}</td>
+                <td width="25%" style="text-transform:capitalize;">{{ project.members[1].nombres }} {{ project.members[1].apellidos }}</td>
             </tr>
             {% endif %}
             {% endfor %}
