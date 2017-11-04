@@ -12,7 +12,7 @@
         <strong>Sr. Dr. Manuel Cáceres Lampen - Director de Posgrado de la USMP-FIA</strong><br />
         De mi consideración:<br/>
         Como en anterior ocasión, tengo el agrado de adjuntar las Carátulas de los
-        de los proyectos que desarrollan los Bachilleres del Taller de Tesis (2017-II), los
+        proyectos que desarrollan los Bachilleres del Taller de Tesis (2017-II), los
         que de ser declarados Aptos, sustentarían el {% if projects and projects.0.pdate_no_time is not none %}{{ projects.0.pdate_no_time }}.{% else %}No se registró fecha de sustentación.{% endif %}
     </div>
     <div class="content_wrapper padded">
@@ -53,8 +53,8 @@
         <table class="table display" id="table_id">
             <thead>
                 <tr>
-                    <th>Proyectos</th>
-                    <th>Tesistas</th>
+                    <th>{{ students_counter }} Tesistas</th>
+                    <th>{{ projects|length }} Proyectos</th>
                     <th class="hidden-print">Cantidad de observaciones</th>
                     <th class="hidden-print">Fecha de presentacion</th>
                     <th class="hidden-print">Jurado</th>
@@ -65,10 +65,10 @@
             {% for project in projects %}
             {% if project.members|length == 1 %}
             <tr>
-                <td width="30%" style="text-transform:uppercase;">{{ project.titulo }}</td>
-                <td width="30%" style="text-transform:capitalize;">
-                    {{ project.members[0].nombres|lower }} {{ project.members[0].apellidos|lower }}
+                <td width="30%">
+                    {% for apellido in project.members[0].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[0].nombres|capitalize }}
                 </td>
+                <td width="30%">{{ project.titulo }}</td>
                 <td class="hidden-print">{{ project.reviewed }}</td>
                 <td class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
                 <td width="20%" class="hidden-print">
@@ -94,8 +94,8 @@
             </tr>
             {% else %}
             <tr>
-                <td rowspan="2" width="30%" style="text-transform:uppercase;">{{ project.titulo }}</td>
-                <td width="30" style="text-transform:capitalize;">{{ project.members[0].nombres|lower }} {{ project.members[0].apellidos|lower }}</td>
+                <td width="30">{% for apellido in project.members[0].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[0].nombres|capitalize }}</td>
+                <td rowspan="2" width="30%">{{ project.titulo }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.reviewed }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
                 <td rowspan="2" class="hidden-print">
@@ -120,7 +120,7 @@
                 </td>
             </tr>
             <tr>
-                <td width="25%" style="text-transform:capitalize;">{{ project.members[1].nombres|lower }} {{ project.members[1].apellidos|lower }}</td>
+                <td width="25%">{% for apellido in project.members[1].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }}{% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[1].nombres|capitalize }}</td>
             </tr>
             {% endif %}
             {% endfor %}

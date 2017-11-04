@@ -362,8 +362,9 @@ class ProjectsList(View):
                     'now': humanize_datetime(datetime.utcnow() - timedelta(hours=5), with_time=False)}
 
         projects = await self.fetch_projects(school_term)
+        students_counter = [0]
 
-        async def enrichen_project(project_: dict):
+        async def enrichen_project(project_: dict, counter: list):
             _project = flatten(project_, {})
 
             _project['members'] = flatten(await self.fetch_members(_project['id']), {})
@@ -378,19 +379,22 @@ class ProjectsList(View):
                 _project['presentation_date'] = None
                 _project['pdate_no_time'] = None
 
+            counter[0] += len(_project['members'])
+
             return _project
 
         _projects = []
 
         for project in projects:
-            _projects.append(await enrichen_project(project))
+            _projects.append(await enrichen_project(project, students_counter))
 
         del projects
 
         return {'projects': _projects,
                 'school_terms': await self.get_school_terms(user),
                 'current_school_term_id': school_term,
-                'now': humanize_datetime(datetime.utcnow() - timedelta(hours=5), with_time=False)}
+                'now': humanize_datetime(datetime.utcnow() - timedelta(hours=5), with_time=False),
+                'students_counter': students_counter[0]}
 
     async def get_school_terms(self, user: dict):
 
