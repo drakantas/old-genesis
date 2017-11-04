@@ -120,7 +120,7 @@
                 </td>
             </tr>
             <tr>
-                <td width="25%">{% for apellido in project.members[1].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }}{% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[1].nombres|capitalize }}</td>
+                <td width="25%">{% for apellido in project.members[1].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[1].nombres|capitalize }}</td>
             </tr>
             {% endif %}
             {% endfor %}
