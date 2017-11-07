@@ -66,7 +66,7 @@
             {% if project.members|length == 1 %}
             <tr>
                 <td width="30%">
-                    {% for apellido in project.members[0].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[0].nombres|capitalize }}
+                    {% for apellido in project.members[0].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[0].nombres.split(' ')|map('capitalize')|join(' ') }}
                 </td>
                 <td width="30%">{{ project.titulo }}</td>
                 <td class="hidden-print">{{ project.reviewed }}</td>
@@ -94,7 +94,7 @@
             </tr>
             {% else %}
             <tr>
-                <td width="30">{% for apellido in project.members[0].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[0].nombres|capitalize }}</td>
+                <td width="30">{% for apellido in project.members[0].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[0].nombres.split(' ')|map('capitalize')|join(' ') }}</td>
                 <td rowspan="2" width="30%">{{ project.titulo }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.reviewed }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
@@ -120,7 +120,7 @@
                 </td>
             </tr>
             <tr>
-                <td width="25%">{% for apellido in project.members[1].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[1].nombres|capitalize }}</td>
+                <td width="25%">{% for apellido in project.members[1].apellidos.split(' ') %}{% if loop.index0 == 0 %}{{ apellido|upper }} {% else %}{{ apellido|capitalize }}{% endif %}{% endfor %}, {{ project.members[1].nombres.split(' ')|map('capitalize')|join(' ') }}</td>
             </tr>
             {% endif %}
             {% endfor %}
