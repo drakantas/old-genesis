@@ -1176,7 +1176,7 @@ class AssignPresentationDate(Project):
             FROM usuario
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id
-            WHERE usuario.rol_id = 5 AND
+            WHERE (usuario.rol_id = 5 OR usuario.rol_id = 7) AND
                   usuario.deshabilitado = false AND
                   usuario.autorizado = true AND
                   usuario.escuela = $2 AND
