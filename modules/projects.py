@@ -12,6 +12,7 @@ from utils.helpers import view, permission_required, flatten, school_term_to_str
 
 
 _datetime = '%m/%d/%Y %I:%M %p'
+_special_datetime = '%H:%M horas del día {} %d de {} de %Y'
 
 
 class Project(View):
@@ -109,10 +110,14 @@ class Project(View):
 
     async def _fetch_decision_panel(self, project: int):
         query = '''
-            SELECT jurado_id, nombres, apellidos
+            SELECT jurado_id, nombres, apellidos, titulo_usuario.descripcion as titulo, rol_usuario.desc as rol
             FROM jurado_presentacion
             LEFT JOIN usuario
                    ON usuario.id = jurado_presentacion.jurado_id
+            LEFT JOIN titulo_usuario
+                   ON titulo_usuario.id = usuario.titulo_id
+            LEFT JOIN rol_usuario
+                   ON rol_usuario.id = usuario.rol_id
             WHERE presentacion_id = $1
         '''
         async with self.request.app.db.acquire() as connection:
@@ -124,7 +129,7 @@ class Project(View):
             FROM usuario
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id
-            WHERE usuario.rol_id = 5 AND
+            WHERE (usuario.rol_id = 5 OR usuario.rol_id = 7) AND
                   usuario.autorizado = true AND
                   usuario.escuela = $1
         '''
@@ -970,14 +975,29 @@ class ProjectPresentation(Project):
     async def get(self, user: dict):
         project = await self.get_project(user)
         members = await self.get_members(project)
-        presentation = flatten(await self.fetch_presentation(project['id']) or {}, {})
+        presentation = await self.fetch_presentation(project['id'])
+
+        if presentation:
+            special_date = presentation['fecha']
+            special_date_str = special_date.strftime(_special_datetime).format(
+                parse_data_key(parse_data_key(special_date.weekday(), 'isoweekdays'), 'days'),
+                parse_data_key(special_date.month, 'months'))
+
+            special_date = special_date_str
+            del special_date_str
+        else:
+            special_date = ''
+
+        presentation = flatten(presentation or {}, {})
         decision_panel = flatten(await self._fetch_decision_panel(project['id']) or [], {})
 
         return {'project': project,
                 'members': members,
                 'presentation': presentation,
                 'decision_panel': decision_panel,
+                'special_date': special_date,
                 'is_member': await self.is_member(user, members),
+                'school': parse_data_key(user['escuela'], 'schools'),
                 'location': 'presentation'}
 
     async def fetch_presentation(self, project: int):

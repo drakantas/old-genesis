@@ -600,6 +600,13 @@ class User(View):
     async def get_roles(self):
         return flatten(await self.fetch_roles() or [], {})
 
+    async def get_titles(self):
+        async with self.request.app.db.acquire() as connection:
+            return await (await connection.prepare('''
+                SELECT *
+                FROM titulo_usuario
+            ''')).fetch()
+
     @staticmethod
     async def _validate_email(name: str, value: str, pos: int, elems: list, dbi: PoolConnectionHolder, user_id: int):
         query = '''
@@ -709,6 +716,7 @@ class EditUser(User):
                 'districts': data_map['districts'],
                 'nationalities': data_map['nationalities'],
                 'roles': await self.get_roles(),
+                'titles': await self.get_titles(),
                 '_authorized': data_map['authorized'],
                 '_disabled': data_map['disabled']}
 
@@ -723,14 +731,15 @@ class EditUser(User):
             'districts': data_map['districts'],
             'nationalities': data_map['nationalities'],
             'roles': await self.get_roles(),
+            'titles': await self.get_titles(),
             '_authorized': data_map['authorized'],
             '_disabled': data_map['disabled']
         }
 
         data = await self.request.post()
 
-        if not check_form_data(data, 'name', 'last_name', 'email', 'password', 'role', 'sex',
-                               'phone', 'district', 'nationality', 'authorized', 'disabled',
+        if not check_form_data(data, 'name', 'last_name', 'title', 'email', 'password', 'role',
+                               'sex', 'phone', 'district', 'nationality', 'authorized', 'disabled',
                                'address'):
             display_data.update({'error': 'Parámetros enviados no son los requeridos...'})
             return display_data
@@ -752,36 +761,39 @@ class EditUser(User):
             display_data.update({'errors': errors})
             return display_data
 
-        await self.update(data['name'], data['last_name'], data['email'], int(data['role']), int(data['sex']),
-                          int(data['phone']), int(data['district']), data['nationality'], int(data['authorized']),
-                          int(data['disabled']), data['address'], _user['id'], password=password)
+        await self.update(data['name'], data['last_name'], int(data['title']), data['email'], int(data['role']),
+                          int(data['sex']), int(data['phone']), int(data['district']), data['nationality'],
+                          int(data['authorized']), int(data['disabled']), data['address'], _user['id'],
+                          password=password)
 
         display_data.update({'success': 'Se ha actualizado al usuario exitosamente',
                              '_user': await self.get_user(int(self.request.match_info['user']), user['escuela'])})
         return display_data
 
-    async def update(self, name: str, last_name: str, email: str, role: int, sex: int, phone: int, district: int,
-                     nationality: str, authorized: int, disabled: int, address: str, user: int, password: str = None):
-        _s = ',credencial=$13' if password is not None else ''
+    async def update(self, name: str, last_name: str, title: int, email: str, role: int, sex: int, phone: int,
+                     district: int, nationality: str, authorized: int, disabled: int, address: str, user: int,
+                     password: str = None):
+        _s = ',credencial=$14' if password is not None else ''
 
         statement = '''
             UPDATE usuario
             SET nombres = $1,
                 apellidos = $2,
-                correo_electronico = $3,
-                rol_id = $4,
-                sexo = $5,
-                nro_telefono = $6,
-                distrito = $7,
-                nacionalidad = $8,
-                autorizado = $9,
-                direccion = $11,
-                deshabilitado = $10{}
-            WHERE id = $12
+                titulo_id = $3,
+                correo_electronico = $4,
+                rol_id = $5,
+                sexo = $6,
+                nro_telefono = $7,
+                distrito = $8,
+                nacionalidad = $9,
+                autorizado = $10,
+                direccion = $12,
+                deshabilitado = $11{}
+            WHERE id = $13
         '''.format(_s)
 
-        parameters = [name, last_name, email, role, sex, phone, district, nationality, bool(authorized), bool(disabled),
-                      address, user]
+        parameters = [name, last_name, title, email, role, sex, phone, district, nationality, bool(authorized),
+                      bool(disabled), address, user]
 
         if password is not None:
             parameters.append(password)
@@ -793,6 +805,7 @@ class EditUser(User):
         return await validator.validate([
             ['Nombres', data['name'], 'len:8,64'],
             ['Apellidos', data['last_name'], 'len:8,64'],
+            ['Título', data['title'], 'digits'],
             ['Correo electrónico', data['email'], 'len:14,128|email|custom', self._validate_email, user_id],
             ['Rol', data['role'], 'digits|len:1|custom', self._validate_role, user_role, self_role],
             ['Sexo', data['sex'], 'digits|len:1|custom', self._validate_sex],
@@ -820,6 +833,7 @@ class AdminRegisterUser(User):
                 'districts': data_map['districts'],
                 'nationalities': data_map['nationalities'],
                 'roles': await self.get_roles(),
+                'titles': await self.get_titles(),
                 '_authorized': data_map['authorized'],
                 '_disabled': data_map['disabled']}
 
@@ -832,14 +846,15 @@ class AdminRegisterUser(User):
             'districts': data_map['districts'],
             'nationalities': data_map['nationalities'],
             'roles': await self.get_roles(),
+            'titles': await self.get_titles(),
             '_authorized': data_map['authorized'],
             '_disabled': data_map['disabled']
         }
 
         data = await self.request.post()
 
-        if not check_form_data(data, 'name', 'last_name', 'email', 'password', 'role', 'sex',
-                               'phone', 'district', 'nationality', 'authorized', 'disabled',
+        if not check_form_data(data, 'name', 'last_name', 'title', 'email', 'password', 'role',
+                               'sex', 'phone', 'district', 'nationality', 'authorized', 'disabled',
                                'address', 'id', 'id_type'):
             display_data.update({'error': 'Parámetros enviados no son los requeridos...'})
             return display_data
@@ -858,7 +873,7 @@ class AdminRegisterUser(User):
     async def create(self, data: dict, user: dict):
         statement = '''
             INSERT INTO usuario
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
         '''
         now = datetime.utcnow() - timedelta(hours=5)
         async with self.request.app.db.acquire() as connection:
@@ -867,7 +882,8 @@ class AdminRegisterUser(User):
                                             data['name'], data['last_name'], int(data['sex']), int(data['id_type']),
                                             data['nationality'], user['escuela'], int(data['phone']),
                                             int(data['district']), data['address'], None, now, now,
-                                            bool(int(data['authorized'])), bool(int(data['disabled'])))
+                                            bool(int(data['authorized'])), bool(int(data['disabled'])),
+                                            int(data['title']))
 
     async def validate(self, data: dict, user_role: int, self_role: int):
         return await validator.validate([
@@ -876,6 +892,7 @@ class AdminRegisterUser(User):
             ['Contraseña', data['password'], 'len:8,16|password'],
             ['Nombres', data['name'], 'len:8,64'],
             ['Apellidos', data['last_name'], 'len:8,64'],
+            ['Titulo', data['title'], 'digits'],
             ['Correo electrónico', data['email'], 'len:14,128|email|unique:correo_electronico,usuario'],
             ['Rol', data['role'], 'digits|len:1|custom', self._validate_role, user_role, self_role],
             ['Sexo', data['sex'], 'digits|len:1|custom', self._validate_sex],

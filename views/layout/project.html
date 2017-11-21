@@ -6,11 +6,11 @@
 
 {% block content %}
     {% if not project.activo %}
-    <div class="content_wrapper" style="background-color:transparent;box-shadow:none;"><div class="alert alert-info" role="alert">
+    <div class="content_wrapper hidden-print" style="background-color:transparent;box-shadow:none;"><div class="alert alert-info" role="alert">
         Este proyecto es de hace uno o más ciclos.
     </div></div>
     {% endif %}
-    <div class="content_wrapper padded">
+    <div class="content_wrapper padded hidden-print">
         <strong>{{ project.ciclo_str }}</strong>
         <hr class="divider">
         <div class="row">
@@ -24,7 +24,7 @@
             </div>
         </div>
     </div>
-    <div class="content_wrapper">
+    <div class="content_wrapper hidden-print">
         <ul class="nav nav-justified">
             <li {% if location == 'overview' %}class="active"{% endif %}>
                 <a href="/projects/{% if user.permissions.crear_proyecto %}my-project{% else %}{{ project.id }}{% endif %}/overview">Resumen</a>

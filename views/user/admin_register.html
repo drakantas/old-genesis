@@ -75,6 +75,15 @@
                     </div>
 
                     <div class="form-group">
+                        <label for="title">Título</label>
+                        <select id="title" name="title" class="selectpicker form-control" data-live-search="true">
+                            {% for t in titles %}
+                            <option value="{{ t.id }}">{{ t.descripcion }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
                         <label for="address">Dirección</label>
                         <input id="address" name="address" class="form-control" placeholder="Dirección" />
                     </div>

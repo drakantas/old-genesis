@@ -4,9 +4,64 @@
 
 {% block project_page %}
     <div class="content_wrapper padded">
-        <h3 style="margin-top:0;">Sustentación</h3>
-        <hr class="divider" />
-        <div class="text-center">
+        <h3 style="margin-top:0;" class="hidden-print">Sustentación</h3>
+        <hr class="divider hidden-print" />
+        {% if presentation and user.rol_id != 1 %}
+        <div class="text-right hidden-print">
+            <a href="javascript:window.print();" class="btn btn-default"><span class="glyphicon glyphicon-print"></span> Imprimir acta de sustentación</a>
+        </div>
+        <div class="visible-print-block" style="font-size:18px;">
+            <h1>Acta de sustentación de tesis</h1>
+            En la ciudad de Lima, siendo las {{ special_date }}, en la Facultad de Ingeniería y Arquitectura de la Universidad San Martín de Porres,
+            se inició la sesión de sustentación de la tesis intitulada: <strong>"{{ project.titulo }}"</strong>, presentada por los bachilleres:
+            {% for member in members %}
+            <strong>{{ member.nombres|upper }}, {{ member.apellidos|upper }}</strong> {% if loop.index0 == 0 and members|length > 1 %}y{% endif %}
+            {% endfor %}, para optar por el título profesional de <span style="font-weight:700;text-transform:uppercase;">Ingeniero de {{ school }}</span>,
+            en concordancia con lo establecido en el Reglamento de Grados y Títulos de la Universidad, ante el jurado calificador, integrado por los catedráticos:<br />
+            <br />
+            {% for dp in decision_panel %}
+            {{ dp.titulo or '' }} {{ dp.nombres }} {{ dp.apellidos }} ({{ dp.rol }}) <br />
+            {% endfor %}
+            <br />
+            Culminada la sesión de sustentación de tesis, los bachilleres obtuvieron el siguiente resultado: <br />
+            <br />
+            {% for member in members %}
+            <div class="text-center" style="padding-bottom:15px;">
+                <strong>{{ member.nombres|upper }}, {{ member.apellidos|upper }}</strong> <br />
+                <br />
+                <strong>{{ '.' * 140 }}</strong>
+            </div>
+            {% endfor %}
+            En fe de lo cual, se asienta la presente <strong>ACTA</strong>, que firman el señor presidente y los demás miembros del jurado.<br />
+            <br />
+            <div class="row">
+            {% for dp in decision_panel %}
+                {% if dp.rol == 'Presidente del jurado' %}
+                <div class="col-xs-12 text-center" style="padding-bottom:15px;">
+                    {{ '_' * 140 }}<br />
+                    {{ dp.titulo }} {{ dp.apellidos|upper }}, {{ dp.nombres|upper }}<br />
+                    {{ dp.rol|upper }}
+                </div>
+                {% else %}
+                <div class="col-xs-6 text-center" style="padding-bottom:15px;">
+                    {{ '_' * 50 }}<br />
+                    {{ dp.titulo }} {{ dp.apellidos|upper }}, {{ dp.nombres|upper }}<br />
+                    {{ dp.rol|upper }}
+                </div>
+                {% endif %}
+            {% endfor %}
+            </div>
+            <div class="text-right" style="margin-top: 40px;font-size:13px;">
+                <strong>Facultad de Ingeniería y Arquitectura</strong><br />
+                Av. La Fontana Nº 1250 Urb. Santa Patricia<br />
+                2da Etapa - La Molina<br />
+                Telf: 208-6000<br />
+                fia@usmp.pe<br />
+                www.usmp.edu.pe/ffia/index.php
+            </div>
+        </div>
+        {% endif %}
+        <div class="text-center hidden-print">
             {% if not presentation %}
             <div class="alert alert-warning">Todavía no se ha asignado una fecha de sustentación.</div>
             {% else %}

@@ -71,10 +71,13 @@ async def get_auth_data(request: Request) -> dict:
                                                     LIMIT 1) AND
                           finalizado = FALSE AND
                           observacion_proyecto.usuario_id = usuario.id
-                   ) as observaciones_pendientes
+                   ) as observaciones_pendientes,
+                   titulo_usuario.descripcion as titulo
             FROM usuario
             LEFT JOIN rol_usuario
                    ON rol_usuario.id = usuario.rol_id
+            LEFT JOIN titulo_usuario
+                   ON titulo_usuario.id = usuario.titulo_id
             WHERE usuario.id = $1
         '''
         stmt = await connection.prepare(query)

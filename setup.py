@@ -72,10 +72,28 @@ def main():
     school_term = loop.run_until_complete(do_transaction([{
         'escuela': 1,
         'fecha_comienzo': '2017-10-01 00:00:00',
-        'fecha_fin': '2017-10-31 23:59:00'
+        'fecha_fin': '2017-12-31 23:59:00'
     }], 'ciclo_academico', 'id', pool))
 
     roles = loop.run_until_complete(do_transaction(_roles_data, 'rol_usuario', 'id', pool))
+    titles = loop.run_until_complete(do_transaction([
+        {
+            'id': 1,
+            'descripcion': 'Dr'
+        },
+        {
+            'id': 2,
+            'descripcion': 'Dra'
+        },
+        {
+            'id': 3,
+            'descripcion': 'Mg.'
+        },
+        {
+            'id': 4,
+            'descripcion': 'Ing.'
+        },
+    ], 'titulo_usuario', 'id', pool))
     students = loop.run_until_complete(do_transaction(_students_data, 'usuario', 'id', pool))
 
     def map_registration(student: dict) -> dict:

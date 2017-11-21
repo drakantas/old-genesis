@@ -57,7 +57,6 @@
                     <th>{{ projects|length }} Proyectos</th>
                     <th class="hidden-print">Cantidad de observaciones</th>
                     <th class="hidden-print">Fecha de presentacion</th>
-                    <th class="hidden-print">Jurado</th>
                     <th class="hidden-print">Opciones</th>
                 </tr>
             </thead>
@@ -71,17 +70,6 @@
                 <td width="30%">{{ project.titulo }}</td>
                 <td class="hidden-print">{{ project.reviewed }}</td>
                 <td class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
-                <td width="20%" class="hidden-print">
-                    {% if project.presentation_date is none %}
-                    No se asignó un jurado aún
-                    {% else %}
-                    <ul class="list-group" style="margin:0;">
-                    {% for panel_member in project.decision_panel %}
-                        <li class="list-group-item">{{ panel_member.nombres }} {{ panel_member.apellidos }}</li>
-                    {% endfor %}
-                    </ul>
-                    {% endif %}
-                </td>
                 <td width="15%" class="hidden-print">
                     <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
                     {% if user.permissions.gestionar_proyectos %}
@@ -98,17 +86,6 @@
                 <td rowspan="2" width="30%">{{ project.titulo }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.reviewed }}</td>
                 <td rowspan="2" class="hidden-print">{{ project.presentation_date or 'Aún no asignado' }}</td>
-                <td rowspan="2" class="hidden-print">
-                    {% if project.presentation_date is none %}
-                    No se asignó un jurado aún
-                    {% else %}
-                    <ul class="list-group" style="margin:0;">
-                    {% for panel_member in project.decision_panel %}
-                        <li class="list-group-item">{{ panel_member.nombres }} {{ panel_member.apellidos }}</li>
-                    {% endfor %}
-                    </ul>
-                    {% endif %}
-                </td>
                 <td rowspan="2" width="15%" class="hidden-print">
                     <a href="/projects/{{ project.id }}/overview" class="btn table-btn" data-toggle="tooltip" title="Ver proyecto"><span class="glyphicon glyphicon-briefcase"></span></a>
                     {% if user.permissions.gestionar_proyectos %}
@@ -132,7 +109,7 @@
     <div class="content_wrapper padded visible-print-block">
         Sin otro particular quedo de Usted<br />
         Atentamente,<br />
-        {{ user.nombres }}  {{ user.apellidos }}
+        {% if user.titulo %}{{ user.titulo }} {% endif %}{{ user.nombres }}  {{ user.apellidos }}
     </div>
 {% endblock %}
 

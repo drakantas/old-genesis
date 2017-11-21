@@ -126,6 +126,17 @@
                     </div>
                 </div>
 
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="title">Título</label>
+                        <select id="title" name="title" class="selectpicker form-control" data-live-search="true">
+                            {% for t in titles %}
+                            <option value="{{ t.id }}">{{ t.descripcion }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
                 <div class="col-md-12 text-center">
                     <a href="/users/{{ _user.id }}/remove-avatar" class="btn btn-danger btn-lg">Eliminar avatar</a> <button type="submit" class="btn btn-success btn-lg">Guardar</button>
                 </div>
