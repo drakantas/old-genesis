@@ -36,7 +36,7 @@
                 {% if project.members|length != 1 %}
                 <tr>
                     <td rowspan="2">{{ project.titulo }}</td>
-                    <td rowspan="1">{{ project.members.0.nombres }} {{ project.members.0.apellidos }}</td>
+                    <td rowspan="1">{{ project.members.0.apellidos|upper }}, {{ project.members.0.nombres|upper }}</td>
                     <td rowspan="1">
                         {% if project.members.0.promedio < 10.5 %}
                         NO APTO
@@ -53,7 +53,7 @@
                     </td>
                 </tr>
                 <tr>
-                    <td rowspan="1">{{ project.members.1.nombres }} {{ project.members.1.apellidos }}</td>
+                    <td rowspan="1">{{ project.members.1.apellidos|upper }}, {{ project.members.1.nombres|upper }}</td>
                     <td rowspan="1">
                         {% if project.members.1.promedio < 10.5 %}
                         NO APTO
@@ -65,7 +65,7 @@
                 {% else %}
                 <tr>
                     <td>{{ project.titulo }}</td>
-                    <td>{{ project.members.0.nombres }} {{ project.members.0.apellidos }}</td>
+                    <td>{{ project.members.0.apellidos|upper }}, {{ project.members.0.nombres|upper }}</td>
                     <td>
                         {% if project.members.0.promedio < 10.5 %}
                         NO APTO
