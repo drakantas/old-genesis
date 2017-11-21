@@ -15,6 +15,13 @@
             No hay proyectos registrados para este ciclo académico
         </div>
         {% else %}
+        <div class="text-right hidden-print">
+            {% if projects|length == 0 %}
+                <a href="javascript:window.print();" class="btn btn-default disabled"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
+            {% else %}
+            <a href="javascript:window.print();" class="btn btn-default"><span class="glyphicon glyphicon-print"></span> Imprimir</a>
+            {% endif %}
+        </div>
         <table class="table">
             <thead>
                 <tr>
